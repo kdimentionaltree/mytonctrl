@@ -5,7 +5,7 @@ import sys
 import time
 
 from mypylib.mypylib import bcolors, Sleep
-from mytoncore import MyTonCore
+from myton.core import MyTonCore
 from mypylib.mypylib import MyPyClass
 
 local = MyPyClass(__file__)

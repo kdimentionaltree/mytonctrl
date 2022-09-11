@@ -462,7 +462,7 @@ def EnablePytonv3(local):
 
 
 def EnableTonHttpApi(local):
-	local.AddLog("start EnablePytonv3 function", "debug")
+	local.AddLog("start EnableTonHttpApi function", "debug")
 	user = local.buffer["user"]
 
 	ton_http_api_installer_path = pkg_resources.resource_filename('myton.installer.scripts', 'tonhttpapiinstaller.sh')

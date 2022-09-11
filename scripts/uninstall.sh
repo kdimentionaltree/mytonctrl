@@ -20,6 +20,7 @@ ENDC='\033[0m'
 systemctl stop validator
 systemctl stop mytoncore
 systemctl stop dht-server
+systemctl stop ton-http-api
 
 # Переменные
 str=$(systemctl cat mytoncore | grep User | cut -d '=' -f2)
@@ -29,6 +30,7 @@ user=$(echo ${str})
 rm -rf /etc/systemd/system/validator.service
 rm -rf /etc/systemd/system/mytoncore.service
 rm -rf /etc/systemd/system/dht-server.service
+rm -rf /etc/systemd/system/ton-http-api.service
 systemctl daemon-reload
 
 # Удаление файлов
@@ -38,8 +40,10 @@ if $full; then
 	rm -rf /usr/bin/ton
 	rm -rf /var/ton-work
 	rm -rf /var/ton-dht-server
+	rm -rf /var/ton-http-api
 fi
 
+rm -rf /var/ton-logs/
 rm -rf /usr/src/mytonctrl
 rm -rf /usr/src/mtc-jsonrpc
 rm -rf /usr/src/pytonv3

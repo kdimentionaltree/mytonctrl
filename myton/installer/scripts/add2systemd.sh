@@ -34,6 +34,7 @@ fi
 
 
 DAEMON_PATH="/etc/systemd/system/${name}.service"
+mkdir -p /var/ton-logs/
 
 cat <<EOF > $DAEMON_PATH
 [Unit]
@@ -51,6 +52,8 @@ Group = $group
 LimitNOFILE = infinity
 LimitNPROC = infinity
 LimitMEMLOCK = infinity
+StandardOutput=file:/var/ton-logs/$name.log.1
+StandardError=file:/var/ton-logs/$name.log.2
 
 [Install]
 WantedBy = multi-user.target

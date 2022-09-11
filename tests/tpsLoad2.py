@@ -4,7 +4,7 @@
 import time
 
 from mypylib.mypylib import MyPyClass
-from mytoncore import MyTonCore
+from myton.core import MyTonCore
 
 local = MyPyClass('./tests')
 local.db["config"]["logLevel"] = "info"

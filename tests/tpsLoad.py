@@ -3,8 +3,8 @@
 
 import time
 
-from mypylib.mypylib import MyPyClass
-from mytoncore import MyTonCore, Sleep
+from mypylib.mypylib import MyPyClass, Sleep
+from myton.core import MyTonCore
 
 
 local = MyPyClass('./tests')

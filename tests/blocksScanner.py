@@ -2,7 +2,8 @@
 # -*- coding: utf_8 -*-
 
 from mypylib.mypylib import bcolors, Sleep, MyPyClass
-from mytoncore import MyTonCore, TonBlocksScanner
+from myton.core import MyTonCore
+from myton.core.tonblocksscanner import TonBlocksScanner
 
 def NewBlockReaction(block):
 	print(f"{bcolors.green} block: {bcolors.endc} {block}")

@@ -80,7 +80,7 @@ def GetPortsFromVconfig(local):
 
 def CreateLocalConfig(local, initBlock, localConfigPath=defaultLocalConfigPath):
 	# dirty hack, but GetInitBlock() function uses the same technique
-	from mytoncore import hex2base64
+	from myton.utils import hex2base64
 
 	# read global config file
 	file = open("/usr/bin/ton/global.config.json", 'rt')
