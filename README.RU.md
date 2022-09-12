@@ -107,7 +107,7 @@ git: https://github.com/igroman787/mtc-jsonrpc
 
 ## Локальная копия toncenter
 Для того что бы поднять на сервере локальную копию https://toncenter.com нужно установить дополнительный модуль:
-`mytonctrl` -> `installer` -> `enable PT`
+`mytonctrl` -> `installer` -> `enable API`
 
 Готово. Локальная копия toncenter доступна по адресу `http://<server-ip-address>:8000`
 git: https://github.com/igroman787/pytonv3

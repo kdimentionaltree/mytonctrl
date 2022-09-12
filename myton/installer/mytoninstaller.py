@@ -62,7 +62,7 @@ def Init(local, console):
 	console.name = "MyTonInstaller"
 	console.color = console.RED
 	console.AddItem("status", inject_globals(Status), "Print TON component status")
-	console.AddItem("enable", inject_globals(Enable), "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'PT' - pyTONv3. Example: 'enable FN'")
+	console.AddItem("enable", inject_globals(Enable), "Enable some function: 'FN' - Full node, 'VC' - Validator console, 'LS' - Liteserver, 'DS' - DHT-Server, 'JR' - jsonrpc, 'API' - TonHttpApi. Example: 'enable FN'")
 	console.AddItem("update", inject_globals(Enable), "Update some function: 'JR' - jsonrpc.  Example: 'update JR'") 
 	console.AddItem("plsc", inject_globals(PrintLiteServerConfig), "Print LiteServer config")
 	console.AddItem("clcf", inject_globals(CreateLocalConfigFile), "CreateLocalConfigFile")
@@ -131,7 +131,7 @@ def Status(local, args):
 def Enable(local, args):
 	name = args[0]
 	user = local.buffer["user"]
-	if name == "PT":
+	if name == "API":
 		CreateLocalConfigFile(local, args)
 	args = ["python3", "-m", "myton.installer", "-u", user, "-e", "enable{name}".format(name=name)]
 	RunAsRoot(args)
@@ -180,8 +180,7 @@ def Event(local, name):
 		DangerousRecoveryValidatorConfigFile(local)
 	if name == "enableJR":
 		EnableJsonRpc(local)
-	if name == "enablePT":
-		# EnablePytonv3(local)
+	if name == "enableAPI":
 		EnableTonHttpApi(local)
 	if name == "clc":
 		ix = sys.argv.index("-i")
