@@ -15,35 +15,36 @@ do
 	esac
 done
 
+author=kdimentionaltree
+repo=mtc-jsonrpc
+branch=master
+
+echo "User: $user"
+echo "Workdir: `pwd`"
+
 # Цвета
-COLOR='\033[92m'
+COLOR='\033[95m'
 ENDC='\033[0m'
 
 # Установка компонентов python3
 echo -e "${COLOR}[1/4]${ENDC} Installing required packages"
-pip3 install pipenv==2022.3.28
+pip3 install Werkzeug json-rpc cloudscraper pyotp
 
 # Клонирование репозиториев с github.com
 echo -e "${COLOR}[2/4]${ENDC} Cloning github repository"
-cd /usr/src
-rm -rf pytonv3
-#git clone https://github.com/EmelyanenkoK/pytonv3
-git clone https://github.com/igroman787/pytonv3
+echo "https://github.com/${author}/${repo}.git -> ${branch}"
 
-# Установка модуля
-cd /usr/src/pytonv3
-python3 setup.py install
-
-# Скомпилировать недостающий бинарник
-cd /usr/bin/ton && make tonlibjson
+cd /usr/src/
+rm -rf mtc-jsonrpc
+git clone --branch=${branch} --recursive https://github.com/${author}/${repo}.git
 
 # Прописать автозагрузку
 echo -e "${COLOR}[3/4]${ENDC} Add to startup"
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 echo "Script dir: ${SCRIPT_DIR}"
-${SCRIPT_DIR}/add2systemd -n pytonv3 -s "/usr/bin/python3 -m pyTON --liteserverconfig /usr/bin/ton/local.config.json --libtonlibjson /usr/bin/ton/tonlib/libtonlibjson.so" -u ${user} -g ${user}
-systemctl restart pytonv3
+${SCRIPT_DIR}/add2systemd.sh -n mtc-jsonrpc -s "/usr/bin/python3 /usr/src/mtc-jsonrpc/mtc-jsonrpc.py" -u ${user} -g ${user}
+systemctl restart mtc-jsonrpc
 
-# Конец
-echo -e "${COLOR}[4/4]${ENDC} pyTONv3 installation complete"
+# Выход из программы
+echo -e "${COLOR}[4/4]${ENDC} JsonRPC installation complete"
 exit 0
