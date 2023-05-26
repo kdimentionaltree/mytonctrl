@@ -868,7 +868,7 @@ def VoteOffer(ton, args):
 def OfferDiff(ton, args):
 	try:
 		offerHash = args[0]
-		offerHash = int(offerHash)
+		offerHash = offerHash
 	except:
 		ColorPrint("{red}Bad args. Usage:{endc} od <offer-hash>")
 		return
