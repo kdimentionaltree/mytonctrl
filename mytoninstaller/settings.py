@@ -16,7 +16,7 @@ from mypylib.mypylib import (
 	Dict
 )
 from mytoninstaller.utils import StartValidator, StartMytoncore
-from mytoninstaller.config import SetConfig, GetConfig
+from mytoninstaller.config import SetConfig, GetConfig, get_own_ip
 from mytoncore.utils import hex2b64
 
 
@@ -61,7 +61,7 @@ def FirstNodeSettings(local):
 	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
-	ip = requests.get("https://ifconfig.me").text
+	ip = get_own_ip()
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
 	local.add_log("Use addr: " + addr, "debug")
@@ -399,7 +399,7 @@ def EnableDhtServer(local):
 	add2systemd(name="dht-server", user=vuser, start=cmd)
 
 	# Получить внешний ip адрес
-	ip = requests.get("https://ifconfig.me").text
+	ip = get_own_ip()
 	port = random.randint(2000, 65000)
 	addr = "{ip}:{port}".format(ip=ip, port=port)
 
@@ -504,7 +504,7 @@ def DangerousRecoveryValidatorConfigFile(local):
 	# Create addrs object
 	buff = Dict()
 	buff["@type"] = "engine.addr"
-	buff.ip = ip2int(requests.get("https://ifconfig.me").text)
+	buff.ip = ip2int(get_own_ip())
 	buff.port = None
 	buff.categories = [0, 1, 2, 3]
 	buff.priority_categories = []

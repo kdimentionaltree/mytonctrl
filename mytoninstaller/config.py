@@ -109,6 +109,13 @@ def CreateLocalConfig(local, initBlock, localConfigPath=defaultLocalConfigPath):
 #end define
 
 
+def get_own_ip():
+	requests.packages.urllib3.util.connection.HAS_IPV6 = False
+	ip = requests.get("https://ifconfig.me/ip").text
+	return ip
+#end define
+
+
 def GetLiteServerConfig(local):
 	keys_dir = local.buffer.keys_dir
 	liteserver_key = keys_dir + "liteserver"
@@ -118,7 +125,7 @@ def GetLiteServerConfig(local):
 	data = file.read()
 	file.close()
 	key = base64.b64encode(data[4:])
-	ip = requests.get("https://ifconfig.me").text
+	ip = get_own_ip()
 	mconfig = GetConfig(path=local.buffer.mconfig_path)
 	result.ip = ip2int(ip)
 	result.port = mconfig.liteClient.liteServer.port
