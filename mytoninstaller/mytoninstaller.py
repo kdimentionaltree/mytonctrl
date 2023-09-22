@@ -36,19 +36,19 @@ from functools import partial
 
 
 def Init(local, console):
-	local.db["config"]["isStartOnlyOneProcess"] = False
-	local.db["config"]["logLevel"] = "debug"
-	local.db["config"]["isIgnorLogWarning"] = True # disable warning
+	local.db.config.isStartOnlyOneProcess = False
+	local.db.config.logLevel = "debug"
+	local.db.config.isIgnorLogWarning = True # disable warning
 	local.run()
-	local.db["config"]["isIgnorLogWarning"] = False # enable warning
+	local.db.config.isIgnorLogWarning = False # enable warning
 
 
 	# create variables
 	user = os.environ.get("USER", "root")
-	local.buffer["user"] = user
-	local.buffer["vuser"] = "validator"
-	local.buffer["cport"] = random.randint(2000, 65000)
-	local.buffer["lport"] = random.randint(2000, 65000)
+	local.buffer.user = user
+	local.buffer.vuser = "validator"
+	local.buffer.cport = random.randint(2000, 65000)
+	local.buffer.lport = random.randint(2000, 65000)
 
 	# this funciton injects MyPyClass instance
 	def inject_globals(func):
@@ -74,50 +74,44 @@ def Init(local, console):
 
 
 def Refresh(local):
-	user = local.buffer["user"]
-	local.buffer["mconfigPath"] = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
+	user = local.buffer.user
+	local.buffer.mconfig_path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	if user == 'root':
-		local.buffer["mconfigPath"] = "/usr/local/bin/mytoncore/mytoncore.db"
+		local.buffer.mconfig_path = "/usr/local/bin/mytoncore/mytoncore.db"
 	#end if
 
 	# create variables
-	binDir = "/usr/bin/"
-	srcDir = "/usr/src/"
-	tonWorkDir = "/var/ton-work/"
-	tonBinDir = binDir + "ton/"
-	tonSrcDir = srcDir + "ton/"
-	local.buffer["binDir"] = binDir
-	local.buffer["srcDir"] = srcDir
-	local.buffer["tonWorkDir"] = tonWorkDir
-	local.buffer["tonBinDir"] = tonBinDir
-	local.buffer["tonSrcDir"] = tonSrcDir
-	tonDbDir = tonWorkDir + "db/"
-	keysDir = tonWorkDir + "keys/"
-	local.buffer["tonDbDir"] = tonDbDir
-	local.buffer["keysDir"] = keysDir
-	local.buffer["tonLogPath"] = tonWorkDir + "log"
-	local.buffer["validatorAppPath"] = tonBinDir + "validator-engine/validator-engine"
-	local.buffer["globalConfigPath"] = tonBinDir + "global.config.json"
-	local.buffer["vconfigPath"] = tonDbDir + "config.json"
+	bin_dir = "/usr/bin/"
+	src_dir = "/usr/src/"
+	ton_work_dir = "/var/ton-work/"
+	ton_bin_dir = bin_dir + "ton/"
+	ton_src_dir = src_dir + "ton/"
+	local.buffer.bin_dir = bin_dir
+	local.buffer.src_dir = src_dir
+	local.buffer.ton_work_dir = ton_work_dir
+	local.buffer.ton_bin_dir = ton_bin_dir
+	local.buffer.ton_src_dir = ton_src_dir
+	ton_db_dir = ton_work_dir + "db/"
+	keys_dir = ton_work_dir + "keys/"
+	local.buffer.ton_db_dir = ton_db_dir
+	local.buffer.keys_dir = keys_dir
+	local.buffer.ton_log_path = ton_work_dir + "log"
+	local.buffer.validator_app_path = ton_bin_dir + "validator-engine/validator-engine"
+	local.buffer.global_config_path = ton_bin_dir + "global.config.json"
+	local.buffer.vconfig_path = ton_db_dir + "config.json"
 #end define
 
 
 def Status(local, args):
-	vconfigPath = local.buffer["vconfigPath"]
-
-	user = local.buffer["user"]
-	mconfigPath = local.buffer["mconfigPath"]
-
-	tonBinDir = local.buffer["tonBinDir"]
-	keysDir = local.buffer["keysDir"]
-	server_key = keysDir + "server"
-	client_key = keysDir + "client"
-	liteserver_key = keysDir + "liteserver"
+	keys_dir = local.buffer.keys_dir
+	server_key = keys_dir + "server"
+	client_key = keys_dir + "client"
+	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
 
 
-	fnStatus = os.path.isfile(vconfigPath)
-	mtcStatus = os.path.isfile(mconfigPath)
+	fnStatus = os.path.isfile(local.buffer.vconfig_path)
+	mtcStatus = os.path.isfile(local.buffer.mconfig_path)
 	vcStatus = os.path.isfile(server_key) or os.path.isfile(client_key)
 	lsStatus = os.path.isfile(liteserver_pubkey)
 
@@ -130,17 +124,16 @@ def Status(local, args):
 
 def Enable(local, args):
 	name = args[0]
-	user = local.buffer["user"]
 	if name == "PT":
 		CreateLocalConfigFile(local, args)
-	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "enable{name}".format(name=name)]
+	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "enable{name}".format(name=name)]
 	run_as_root(args)
 #end define
 
 
 def DRVCF(local, args):
 	user = local.buffer["user"]
-	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "drvcf"]
+	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "drvcf"]
 	run_as_root(args)
 #end define
 
@@ -162,7 +155,7 @@ def CreateLocalConfigFile(local, args):
 	initBlock = GetInitBlock()
 	initBlock_b64 = dict2b64(initBlock)
 	user = local.buffer["user"]
-	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "-i", initBlock_b64]
+	args = ["python3", "-m", "mytoninstaller", "-u", local.buffer.user, "-e", "clc", "-i", initBlock_b64]
 	run_as_root(args)
 #end define
 
@@ -195,7 +188,7 @@ def General(local):
 	if "-u" in sys.argv:
 		ux = sys.argv.index("-u")
 		user = sys.argv[ux+1]
-		local.buffer["user"] = user
+		local.buffer.user = user
 		Refresh(local)
 	if "-e" in sys.argv:
 		ex = sys.argv.index("-e")
@@ -207,11 +200,11 @@ def General(local):
 	if "-t" in sys.argv:
 		mx = sys.argv.index("-t")
 		telemetry = sys.argv[mx+1]
-		local.buffer["telemetry"] = str2bool(telemetry)
+		local.buffer.telemetry = str2bool(telemetry)
 	if "--dump" in sys.argv:
 		mx = sys.argv.index("--dump")
 		dump = sys.argv[mx+1]
-		local.buffer["dump"] = str2bool(dump)
+		local.buffer.dump = str2bool(dump)
 	#end if
 
 		# Создать настройки для mytoncore.py

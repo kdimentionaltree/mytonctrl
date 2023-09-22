@@ -60,10 +60,8 @@ class MyTonCore():
 	#end define
 
 	def Refresh(self):
-		# if self.dbFile:
-		# 	self.local.dbLoad(self.dbFile)
-		# else:
-		# 	self.local.dbLoad()
+		if self.dbFile:
+			self.local.load_db(self.dbFile)
 
 		if not self.walletsDir:
 			self.walletsDir = self.local.buffer.my_work_dir + "wallets/"
@@ -104,7 +102,7 @@ class MyTonCore():
 		#end if
 
 		# Check config file
-		# self.CheckConfigFile(fift, liteClient)
+		self.CheckConfigFile(fift, liteClient)
 	#end define
 
 	def CheckConfigFile(self, fift, liteClient):

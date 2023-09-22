@@ -6,7 +6,7 @@ import base64
 
 from mytoncore.utils import hex2b64, dict2b64
 from mytoninstaller.utils import StartMytoncore, GetInitBlock
-from mypylib.mypylib import ip2int
+from mypylib.mypylib import ip2int, Dict
 
 
 defaultLocalConfigPath = "/usr/bin/ton/local.config.json"
@@ -17,7 +17,7 @@ def GetConfig(**kwargs):
 	file = open(path, 'rt')
 	text = file.read()
 	file.close()
-	config = json.loads(text)
+	config = Dict(json.loads(text))
 	return config
 #end define
 
@@ -36,42 +36,42 @@ def SetConfig(**kwargs):
 
 def BackupVconfig(local):
 	local.add_log("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
-	vconfigPath = local.buffer["vconfigPath"]
-	backupPath = vconfigPath + ".backup"
-	args = ["cp", vconfigPath, backupPath]
+	vconfig_path = local.buffer.vconfig_path
+	backupPath = vconfig_path + ".backup"
+	args = ["cp", vconfig_path, backupPath]
 	subprocess.run(args)
 #end define
 
 
 def BackupMconfig(local):
 	local.add_log("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
-	mconfigPath = local.buffer["mconfigPath"]
-	backupPath = mconfigPath + ".backup"
-	args = ["cp", mconfigPath, backupPath]
+	mconfig_path = local.buffer.mconfig_path
+	backupPath = mconfig_path + ".backup"
+	args = ["cp", mconfig_path, backupPath]
 	subprocess.run(args)
 #end define
 
 
 def GetPortsFromVconfig(local):
-	vconfigPath = local.buffer["vconfigPath"]
+	vconfig_path = local.buffer.vconfig_path
 
 	# read vconfig
 	local.add_log("read vconfig", "debug")
-	vconfig = GetConfig(path=vconfigPath)
+	vconfig = GetConfig(path=vconfig_path)
 
 	# read mconfig
 	local.add_log("read mconfig", "debug")
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
+	mconfig_path = local.buffer.mconfig_path
+	mconfig = GetConfig(path=mconfig_path)
 
 	# edit mytoncore config file
 	local.add_log("edit mytoncore config file", "debug")
-	mconfig["liteClient"]["liteServer"]["port"] = mconfig["liteservers"][0]["port"]
-	mconfig["validatorConsole"]["addr"] = "127.0.0.1:{}".format(mconfig["control"][0]["port"])
+	mconfig.liteClient.liteServer.port = mconfig.liteservers[0].port
+	mconfig.validatorConsole.addr = f"127.0.0.1:{mconfig.control[0].port}"
 
 	# write mconfig
 	local.add_log("write mconfig", "debug")
-	SetConfig(path=mconfigPath, data=mconfig)
+	SetConfig(path=mconfig_path, data=mconfig)
 
 	# restart mytoncore
 	StartMytoncore(local)
@@ -102,7 +102,7 @@ def CreateLocalConfig(local, initBlock, localConfigPath=defaultLocalConfigPath):
 	file.close()
 
 	# chown
-	user = local.buffer["user"]
+	user = local.buffer.user
 	args = ["chown", "-R", user + ':' + user, localConfigPath]
 
 	print("Local config file created:", localConfigPath)
@@ -110,23 +110,20 @@ def CreateLocalConfig(local, initBlock, localConfigPath=defaultLocalConfigPath):
 
 
 def GetLiteServerConfig(local):
-	keysDir = local.buffer["keysDir"]
-	liteserver_key = keysDir + "liteserver"
+	keys_dir = local.buffer.keys_dir
+	liteserver_key = keys_dir + "liteserver"
 	liteserver_pubkey = liteserver_key + ".pub"
-	result = dict()
+	result = Dict()
 	file = open(liteserver_pubkey, 'rb')
 	data = file.read()
 	file.close()
 	key = base64.b64encode(data[4:])
 	ip = requests.get("https://ifconfig.me").text
-	mconfigPath = local.buffer["mconfigPath"]
-	mconfig = GetConfig(path=mconfigPath)
-	liteClient = mconfig.get("liteClient")
-	liteServer = liteClient.get("liteServer")
-	result["ip"] = ip2int(ip)
-	result["port"] = liteServer.get("port")
-	result["id"] = dict()
-	result["id"]["@type"]= "pub.ed25519"
-	result["id"]["key"]= key.decode()
+	mconfig = GetConfig(path=local.buffer.mconfig_path)
+	result.ip = ip2int(ip)
+	result.port = mconfig.liteClient.liteServer.port
+	result.id = Dict()
+	result.id["@type"]= "pub.ed25519"
+	result.id.key= key.decode()
 	return result
 #end define

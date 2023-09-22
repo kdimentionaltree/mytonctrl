@@ -16,7 +16,8 @@ from mypylib.mypylib import (
     get_internet_interface_name,
     get_service_pid,
     get_load_avg,
-    thr_sleep
+    thr_sleep,
+    Dict
 )
 
 
@@ -49,7 +50,7 @@ def Event(local, eventName):
         EnableVcEvent(local)
     elif eventName == "validator down":
         ValidatorDownEvent(local)
-    local.Exit()
+    local.exit()
 # end define
 
 
