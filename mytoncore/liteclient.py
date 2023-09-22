@@ -14,7 +14,8 @@ class LiteClient:
 
 	def Run(self, cmd, **kwargs):
 		index = kwargs.get("index")
-		timeout = kwargs.get("timeout", 3)
+		liteclient_timeout = self.local.db.liteclient_timeout if self.local.db.liteclient_timeout else 3
+		timeout = kwargs.get("timeout", liteclient_timeout)
 		useLocalLiteServer = kwargs.get("useLocalLiteServer", True)
 		validatorStatus = self.ton.GetValidatorStatus()
 		validatorOutOfSync = validatorStatus.get("outOfSync")
@@ -36,7 +37,7 @@ class LiteClient:
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
-			self.local.AddLog("args: {args}".format(args=args), "error")
+			self.local.add_log("args: {args}".format(args=args), "error")
 			raise Exception("LiteClient error: {err}".format(err=err))
 		return output
 	#end define

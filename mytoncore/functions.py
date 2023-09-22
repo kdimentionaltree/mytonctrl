@@ -11,13 +11,12 @@ import subprocess
 from mytoncore.mytoncore import MyTonCore, Dec2HexAddr
 from mytoncore.tonblocksscanner import TonBlocksScanner
 from mypylib.mypylib import (
-    GetTimestamp,
-    GetInternetInterfaceName,
     b2mb,
-    GetLoadAvg,
-    GetGitHash,
-    Sleep,
-    GetServicePid
+    get_timestamp,
+    get_internet_interface_name,
+    get_service_pid,
+    get_load_avg,
+    thr_sleep
 )
 
 
@@ -29,18 +28,19 @@ def Init(local):
         Event(local, eventName)
     # end if
 
-    local.Run()
+    local.run()
 
     # statistics
-    local.buffer["transData"] = dict()
-    local.buffer["network"] = [None]*15*6
-    local.buffer["diskio"] = [None]*15*6
+    local.buffer.blocksData = dict()
+    local.buffer.transData = dict()
+    local.buffer.network = [None]*15*6
+    local.buffer.diskio = [None]*15*6
 
     # scan blocks
-    local.buffer["masterBlocksList"] = list()
-    local.buffer["prevShardsBlock"] = dict()
-    local.buffer["blocksNum"] = 0
-    local.buffer["transNum"] = 0
+    local.buffer.masterBlocksList = list()
+    local.buffer.prevShardsBlock = dict()
+    local.buffer.blocksNum = 0
+    local.buffer.transNum = 0
 # end define
 
 
@@ -54,7 +54,7 @@ def Event(local, eventName):
 
 
 def EnableVcEvent(local):
-    local.AddLog("start EnableVcEvent function", "debug")
+    local.add_log("start EnableVcEvent function", "debug")
     # Создать новый кошелек для валидатора
     ton = MyTonCore(local)
     wallet = ton.CreateWallet("validator_wallet_001", -1)
@@ -66,13 +66,13 @@ def EnableVcEvent(local):
     local.db["adnlAddr"] = adnlAddr
 
     # Сохранить
-    local.dbSave()
+    #local.save_db()
 # end define
 
 
 def ValidatorDownEvent(local):
-    local.AddLog("start ValidatorDownEvent function", "debug")
-    local.AddLog("Validator is down", "error")
+    local.add_log("start ValidatorDownEvent function", "debug")
+    local.add_log("Validator is down", "error")
 # end define
 
 
@@ -99,7 +99,7 @@ def Statistics(local, scanner):
 
 
 def ReadDiskData(local):
-    timestamp = GetTimestamp()
+    timestamp = get_timestamp()
     disks = GetDisksList()
     buff = psutil.disk_io_counters(perdisk=True)
     data = dict()
@@ -113,13 +113,13 @@ def ReadDiskData(local):
         data[name]["writeCount"] = buff[name].write_count
     # end for
 
-    local.buffer["diskio"].pop(0)
-    local.buffer["diskio"].append(data)
+    local.buffer.diskio.pop(0)
+    local.buffer.diskio.append(data)
 # end define
 
 
 def SaveDiskStatistics(local):
-    data = local.buffer["diskio"]
+    data = local.buffer.diskio
     data = data[::-1]
     zerodata = data[0]
     buff1 = data[1*6-1]
@@ -197,8 +197,8 @@ def GetDisksList():
 
 
 def ReadNetworkData(local):
-    timestamp = GetTimestamp()
-    interfaceName = GetInternetInterfaceName()
+    timestamp = get_timestamp()
+    interfaceName = get_internet_interface_name()
     buff = psutil.net_io_counters(pernic=True)
     buff = buff[interfaceName]
     data = dict()
@@ -209,13 +209,13 @@ def ReadNetworkData(local):
     data["packetsSent"] = buff.packets_sent
     data["packetsRecv"] = buff.packets_recv
 
-    local.buffer["network"].pop(0)
-    local.buffer["network"].append(data)
+    local.buffer.network.pop(0)
+    local.buffer.network.append(data)
 # end define
 
 
 def SaveNetworkStatistics(local):
-    data = local.buffer["network"]
+    data = local.buffer.network
     data = data[::-1]
     zerodata = data[0]
     buff1 = data[1*6-1]
@@ -262,7 +262,7 @@ def CalculateNetworkStatistics(zerodata, data):
 
 
 def ReadTransData(local, scanner):
-    transData = local.buffer.get("transData")
+    transData = local.buffer.transData
     SetToTimeData(transData, scanner.transNum)
     ShortTimeData(transData)
 # end define
@@ -322,14 +322,14 @@ def GetItemFromTimeData(data, timeneed):
 
 
 def GetTps(local, timediff):
-    data = local.buffer["transData"]
+    data = local.buffer.transData
     tps = GetDataPerSecond(data, timediff)
     return tps
 # end define
 
 
 def GetBps(local, timediff):
-    data = local.buffer["blocksData"]
+    data = local.buffer.blocksData
     bps = GetDataPerSecond(data, timediff)
     return bps
 # end define
@@ -390,7 +390,7 @@ def GetSwapInfo():
 
 
 def GetValidatorProcessInfo():
-    pid = GetServicePid("validator")
+    pid = get_service_pid("validator")
     p = psutil.Process(pid)
     mem = p.memory_info()
     result = dict()
@@ -420,7 +420,7 @@ def Telemetry(local, ton):
     data["adnlAddr"] = ton.GetAdnlAddr()
     data["validatorStatus"] = ton.GetValidatorStatus()
     data["cpuNumber"] = psutil.cpu_count()
-    data["cpuLoad"] = GetLoadAvg()
+    data["cpuLoad"] = get_load_avg()
     data["netLoad"] = ton.GetStatistics("netLoadAvg")
     data["tps"] = ton.GetStatistics("tpsAvg")
     data["disksLoad"] = ton.GetStatistics("disksLoadAvg")
@@ -432,16 +432,20 @@ def Telemetry(local, ton):
     data["swap"] = GetSwapInfo()
     data["uname"] = GetUname()
     data["vprocess"] = GetValidatorProcessInfo()
-    elections = local.TryFunction(ton.GetElectionEntries)
-    complaints = local.TryFunction(ton.GetComplaints)
+    elections = local.try_function(ton.GetElectionEntries)
+    complaints = local.try_function(ton.GetComplaints)
 
     # Get git hashes
     gitHashes = dict()
-    gitHashes["mytonctrl"] = GetGitHash("/usr/src/mytonctrl")
+    gitHashes["mytonctrl"] = get_git_hash("/usr/src/mytonctrl")
     gitHashes["validator"] = GetBinGitHash(
         "/usr/bin/ton/validator-engine/validator-engine")
     data["gitHashes"] = gitHashes
     data["stake"] = local.db.get("stake")
+
+    # Get validator config
+    vconfig = self.GetValidatorConfig()
+    data["fullnode_adnl"] = vconfig.fullnode
 
     # Send data to toncenter server
     liteUrl_default = "https://telemetry.toncenter.com/report_status"
@@ -451,7 +455,7 @@ def Telemetry(local, ton):
 # end define
 
 
-def GetBinGitHash(path):
+def GetBinGitHash(path, short=False):
     if not os.path.isfile(path):
         return
     args = [path, "--version"]
@@ -463,6 +467,8 @@ def GetBinGitHash(path):
     buff = output.split(' ')
     start = buff.index("Commit:") + 1
     result = buff[start].replace(',', '')
+    if short is True:
+        result = result[:7]
     return result
 # end define
 
@@ -512,16 +518,15 @@ def Slashing(local, ton):
     # end if
 
     # Creating complaints
-    slashTime = local.buffer.get("slashTime")
+    slash_time = local.buffer.slash_time
     config32 = ton.GetConfig32()
     start = config32.get("startWorkTime")
     end = config32.get("endWorkTime")
-    local.AddLog("slashTime {}, start {}, end {}".format(
-        slashTime, start, end), "debug")
-    if slashTime != start:
+    local.add_log("slash_time {}, start {}, end {}".format(slash_time, start, end), "debug")
+    if slash_time != start:
         end -= 60
         ton.CheckValidators(start, end)
-        local.buffer["slashTime"] = start
+        local.buffer.slash_time = start
 # end define
 
 
@@ -550,22 +555,22 @@ def ScanLiteServers(local, ton):
 
 
 def General(local):
-    local.AddLog("start General function", "debug")
+    local.add_log("start General function", "debug")
     ton = MyTonCore(local)
-    scanner = TonBlocksScanner(ton, local=local)
+    scanner = Dict()
     # scanner.Run()
 
     # Запустить потоки
-    local.StartCycle(Elections, sec=600, args=(local, ton, ))
-    local.StartCycle(Statistics, sec=10, args=(local, scanner,))
-    local.StartCycle(Offers, sec=600, args=(local, ton, ))
-    local.StartCycle(Complaints, sec=600, args=(local, ton, ))
-    local.StartCycle(Slashing, sec=600, args=(local, ton, ))
-    local.StartCycle(Domains, sec=600, args=(local, ton, ))
-    local.StartCycle(Telemetry, sec=60, args=(local, ton, ))
-    local.StartCycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
-    local.StartCycle(ScanLiteServers, sec=60, args=(local, ton,))
-    Sleep()
+    local.start_cycle(Elections, sec=600, args=(local, ton, ))
+    local.start_cycle(Statistics, sec=10, args=(local, scanner,))
+    local.start_cycle(Offers, sec=600, args=(local, ton, ))
+    local.start_cycle(Complaints, sec=600, args=(local, ton, ))
+    local.start_cycle(Slashing, sec=600, args=(local, ton, ))
+    local.start_cycle(Domains, sec=600, args=(local, ton, ))
+    local.start_cycle(Telemetry, sec=60, args=(local, ton, ))
+    local.start_cycle(OverlayTelemetry, sec=7200, args=(local, ton, ))
+    local.start_cycle(ScanLiteServers, sec=60, args=(local, ton,))
+    thr_sleep()
 # end define
 
 

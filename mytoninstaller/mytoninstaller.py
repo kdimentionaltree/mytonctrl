@@ -7,7 +7,7 @@ import random
 import json
 import subprocess
 
-from mypylib.mypylib import MyPyClass, RunAsRoot
+from mypylib.mypylib import MyPyClass, run_as_root
 from mypyconsole.mypyconsole import MyPyConsole
 
 from mytoninstaller.config import GetLiteServerConfig
@@ -134,14 +134,14 @@ def Enable(local, args):
 	if name == "PT":
 		CreateLocalConfigFile(local, args)
 	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "enable{name}".format(name=name)]
-	RunAsRoot(args)
+	run_as_root(args)
 #end define
 
 
 def DRVCF(local, args):
 	user = local.buffer["user"]
 	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "drvcf"]
-	RunAsRoot(args)
+	run_as_root(args)
 #end define
 
 
@@ -163,7 +163,7 @@ def CreateLocalConfigFile(local, args):
 	initBlock_b64 = dict2b64(initBlock)
 	user = local.buffer["user"]
 	args = ["python3", "-m", "mytoninstaller", "-u", user, "-e", "clc", "-i", initBlock_b64]
-	RunAsRoot(args)
+	run_as_root(args)
 #end define
 
 

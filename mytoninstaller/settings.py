@@ -7,14 +7,20 @@ import random
 import json
 import pkg_resources
 
-from mypylib.mypylib import Add2Systemd, GetDirFromPath, RunAsRoot, ColorPrint, ip2int
+from mypylib.mypylib import (
+	add2systemd, 
+	get_dir_from_path, 
+	run_as_root, 
+	color_print, 
+	ip2int
+)
 from mytoninstaller.utils import StartValidator, StartMytoncore
 from mytoninstaller.config import SetConfig, GetConfig
 from mytoncore.utils import hex2b64
 
 
 def FirstNodeSettings(local):
-	local.AddLog("start FirstNodeSettings fuction", "debug")
+	local.add_log("start FirstNodeSettings fuction", "debug")
 
 	# Создать переменные
 	user = local.buffer["user"]
@@ -29,7 +35,7 @@ def FirstNodeSettings(local):
 
 	# Проверить конфигурацию
 	if os.path.isfile(vconfigPath):
-		local.AddLog(f"Validators config '{vconfigPath}' already exist. Break FirstNodeSettings fuction", "warning")
+		local.add_log(f"Validators config '{vconfigPath}' already exist. Break FirstNodeSettings fuction", "warning")
 		return
 	#end if
 
@@ -38,7 +44,7 @@ def FirstNodeSettings(local):
 	text = file.read()
 	file.close()
 	if vuser not in text:
-		local.AddLog("Creating new user: " + vuser, "debug")
+		local.add_log("Creating new user: " + vuser, "debug")
 		args = ["/usr/sbin/useradd", "-d", "/dev/null", "-s", "/dev/null", vuser]
 		subprocess.run(args)
 	#end if
@@ -51,16 +57,16 @@ def FirstNodeSettings(local):
 	cpus = psutil.cpu_count() - 1
 	cmd = "{validatorAppPath} --threads {cpus} --daemonize --global-config {globalConfigPath} --db {tonDbDir} --logname {tonLogPath} --state-ttl 604800 --verbosity 1"
 	cmd = cmd.format(validatorAppPath=validatorAppPath, globalConfigPath=globalConfigPath, tonDbDir=tonDbDir, tonLogPath=tonLogPath, cpus=cpus)
-	Add2Systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
+	add2systemd(name="validator", user=vuser, start=cmd) # post="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py -e \"validator down\""
 
 	# Получить внешний ip адрес
 	ip = requests.get("https://ifconfig.me").text
 	vport = random.randint(2000, 65000)
 	addr = "{ip}:{vport}".format(ip=ip, vport=vport)
-	local.AddLog("Use addr: " + addr, "debug")
+	local.add_log("Use addr: " + addr, "debug")
 
 	# Первый запуск
-	local.AddLog("First start validator - create config.json", "debug")
+	local.add_log("First start validator - create config.json", "debug")
 	args = [validatorAppPath, "--global-config", globalConfigPath, "--db", tonDbDir, "--ip", addr, "--logname", tonLogPath]
 	subprocess.run(args)
 
@@ -68,7 +74,7 @@ def FirstNodeSettings(local):
 	DownloadDump(local)
 
 	# chown 1
-	local.AddLog("Chown ton-work dir", "debug")
+	local.add_log("Chown ton-work dir", "debug")
 	args = ["chown", "-R", vuser + ':' + vuser, tonWorkDir]
 	subprocess.run(args)
 
@@ -83,7 +89,7 @@ def DownloadDump(local):
 		return
 	#end if
 
-	local.AddLog("start DownloadDump fuction", "debug")
+	local.add_log("start DownloadDump fuction", "debug")
 	url = "https://dump.ton.org"
 	dumpSize = requests.get(url + "/dumps/latest.size.archive.txt").text
 	print("dumpSize:", dumpSize)
@@ -104,23 +110,23 @@ def DownloadDump(local):
 
 
 def FirstMytoncoreSettings(local):
-	local.AddLog("start FirstMytoncoreSettings fuction", "debug")
+	local.add_log("start FirstMytoncoreSettings fuction", "debug")
 	user = local.buffer["user"]
 
 	# Прописать mytoncore.py в автозагрузку
-	# Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
-	Add2Systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m mytoncore")
+	# add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 /usr/src/mytonctrl/mytoncore.py")  # TODO: fix path
+	add2systemd(name="mytoncore", user=user, start="/usr/bin/python3 -m mytoncore")
 
 	# Проверить конфигурацию
 	path = "/home/{user}/.local/share/mytoncore/mytoncore.db".format(user=user)
 	if os.path.isfile(path):
-		local.AddLog(f"{path} already exist. Break FirstMytoncoreSettings fuction", "warning")
+		local.add_log(f"{path} already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
 
 	path2 = "/usr/local/bin/mytoncore/mytoncore.db"
 	if os.path.isfile(path2):
-		local.AddLog(f"{path2}.db already exist. Break FirstMytoncoreSettings fuction", "warning")
+		local.add_log(f"{path2}.db already exist. Break FirstMytoncoreSettings fuction", "warning")
 		return
 	#end if
 
@@ -135,7 +141,7 @@ def FirstMytoncoreSettings(local):
 
 	# Подготовить папку mytoncore
 	mconfigPath = local.buffer["mconfigPath"]
-	mconfigDir = GetDirFromPath(mconfigPath)
+	mconfigDir = get_dir_from_path(mconfigPath)
 	os.makedirs(mconfigDir, exist_ok=True)
 
 	# create variables
@@ -182,7 +188,7 @@ def FirstMytoncoreSettings(local):
 #end define
 
 def EnableValidatorConsole(local):
-	local.AddLog("start EnableValidatorConsole function", "debug")
+	local.add_log("start EnableValidatorConsole function", "debug")
 
 	# Create variables
 	user = local.buffer["user"]
@@ -201,12 +207,12 @@ def EnableValidatorConsole(local):
 
 	# Check if key exist
 	if os.path.isfile(server_key):
-		local.AddLog(f"Server key '{server_key}' already exist. Break EnableValidatorConsole fuction", "warning")
+		local.add_log(f"Server key '{server_key}' already exist. Break EnableValidatorConsole fuction", "warning")
 		return
 	#end if
 
 	if os.path.isfile(client_key):
-		local.AddLog(f"Client key '{client_key}' already exist. Break EnableValidatorConsole fuction", "warning")
+		local.add_log(f"Client key '{client_key}' already exist. Break EnableValidatorConsole fuction", "warning")
 		return
 	#end if
 
@@ -284,7 +290,7 @@ def EnableValidatorConsole(local):
 #end define
 
 def EnableLiteServer(local):
-	local.AddLog("start EnableLiteServer function", "debug")
+	local.add_log("start EnableLiteServer function", "debug")
 
 	# Create variables
 	user = local.buffer["user"]
@@ -301,12 +307,12 @@ def EnableLiteServer(local):
 
 	# Check if key exist
 	if os.path.isfile(liteserver_pubkey):
-		local.AddLog(f"Liteserver key '{liteserver_pubkey}' already exist. Break EnableLiteServer fuction", "warning")
+		local.add_log(f"Liteserver key '{liteserver_pubkey}' already exist. Break EnableLiteServer fuction", "warning")
 		return
 	#end if
 
 	# generate liteserver key
-	local.AddLog("generate liteserver key", "debug")
+	local.add_log("generate liteserver key", "debug")
 	args = [generate_random_id, "--mode", "keys", "--name", liteserver_key]
 	process = subprocess.run(args, stdout=subprocess.PIPE)
 	output = process.stdout.decode("utf-8")
@@ -315,34 +321,34 @@ def EnableLiteServer(local):
 	liteserver_key_b64 = output_arr[1].replace('\n', '')
 
 	# move key
-	local.AddLog("move key", "debug")
+	local.add_log("move key", "debug")
 	newKeyPath = tonDbDir + "/keyring/" + liteserver_key_hex
 	args = ["mv", liteserver_key, newKeyPath]
 	subprocess.run(args)
 
 	# chown 1
-	local.AddLog("chown 1", "debug")
+	local.add_log("chown 1", "debug")
 	args = ["chown", vuser + ':' + vuser, newKeyPath]
 	subprocess.run(args)
 
 	# chown 2
-	local.AddLog("chown 2", "debug")
+	local.add_log("chown 2", "debug")
 	args = ["chown", user + ':' + user, liteserver_pubkey]
 	subprocess.run(args)
 
 	# read vconfig
-	local.AddLog("read vconfig", "debug")
+	local.add_log("read vconfig", "debug")
 	vconfig = GetConfig(path=vconfigPath)
 
 	# prepare vconfig
-	local.AddLog("prepare vconfig", "debug")
+	local.add_log("prepare vconfig", "debug")
 	liteserver = dict()
 	liteserver["id"] = liteserver_key_b64
 	liteserver["port"] = lport
 	vconfig["liteservers"].append(liteserver)
 
 	# write vconfig
-	local.AddLog("write vconfig", "debug")
+	local.add_log("write vconfig", "debug")
 	SetConfig(path=vconfigPath, data=vconfig)
 
 	# restart validator
@@ -350,12 +356,12 @@ def EnableLiteServer(local):
 
 	# edit mytoncore config file
 	# read mconfig
-	local.AddLog("read mconfig", "debug")
+	local.add_log("read mconfig", "debug")
 	mconfigPath = local.buffer["mconfigPath"]
 	mconfig = GetConfig(path=mconfigPath)
 
 	# edit mytoncore config file
-	local.AddLog("edit mytoncore config file", "debug")
+	local.add_log("edit mytoncore config file", "debug")
 	liteServer = dict()
 	liteServer["pubkeyPath"] = liteserver_pubkey
 	liteServer["ip"] = "127.0.0.1"
@@ -363,7 +369,7 @@ def EnableLiteServer(local):
 	mconfig["liteClient"]["liteServer"] = liteServer
 
 	# write mconfig
-	local.AddLog("write mconfig", "debug")
+	local.add_log("write mconfig", "debug")
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# restart mytoncore
@@ -372,7 +378,7 @@ def EnableLiteServer(local):
 
 
 def EnableDhtServer(local):
-	local.AddLog("start EnableDhtServer function", "debug")
+	local.add_log("start EnableDhtServer function", "debug")
 	vuser = local.buffer["vuser"]
 	tonBinDir = local.buffer["tonBinDir"]
 	globalConfigPath = local.buffer["globalConfigPath"]
@@ -384,7 +390,7 @@ def EnableDhtServer(local):
 	# Проверить конфигурацию
 	dht_config_path = "/var/ton-dht-server/config.json"
 	if os.path.isfile(dht_config_path):
-		local.AddLog(f"DHT-Server '{dht_config_path}' already exist. Break EnableDhtServer fuction", "warning")
+		local.add_log(f"DHT-Server '{dht_config_path}' already exist. Break EnableDhtServer fuction", "warning")
 		return
 	#end if
 
@@ -394,7 +400,7 @@ def EnableDhtServer(local):
 	# Прописать автозагрузку
 	cmd = "{dht_server} -C {globalConfigPath} -D {tonDhtServerDir}"
 	cmd = cmd.format(dht_server=dht_server, globalConfigPath=globalConfigPath, tonDhtServerDir=tonDhtServerDir)
-	Add2Systemd(name="dht-server", user=vuser, start=cmd)
+	add2systemd(name="dht-server", user=vuser, start=cmd)
 
 	# Получить внешний ip адрес
 	ip = requests.get("https://ifconfig.me").text
@@ -432,50 +438,50 @@ def EnableDhtServer(local):
 
 
 def EnableJsonRpc(local):
-	local.AddLog("start EnableJsonRpc function", "debug")
+	local.add_log("start EnableJsonRpc function", "debug")
 	user = local.buffer["user"]
 
 	jsonrpcinstaller_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'jsonrpcinstaller.sh')
-	local.AddLog(f"Running script: {jsonrpcinstaller_path}", "debug")
-	exitCode = RunAsRoot(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
+	local.add_log(f"Running script: {jsonrpcinstaller_path}", "debug")
+	exitCode = run_as_root(["bash", jsonrpcinstaller_path, "-u", user])  # TODO: fix path
 	if exitCode == 0:
 		text = "EnableJsonRpc - {green}OK{endc}"
 	else:
 		text = "EnableJsonRpc - {red}Error{endc}"
-	ColorPrint(text)
+	color_print(text)
 #end define
 
 
 def EnablePytonv3(local):
-	local.AddLog("start EnablePytonv3 function", "debug")
+	local.add_log("start EnablePytonv3 function", "debug")
 	user = local.buffer["user"]
 
 	pythonv3installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'pytonv3installer.sh')
-	local.AddLog(f"Running script: {pythonv3installer_path}", "debug")
-	exitCode = RunAsRoot(["bash", pythonv3installer_path, "-u", user])
+	local.add_log(f"Running script: {pythonv3installer_path}", "debug")
+	exitCode = run_as_root(["bash", pythonv3installer_path, "-u", user])
 	if exitCode == 0:
 		text = "EnablePytonv3 - {green}OK{endc}"
 	else:
 		text = "EnablePytonv3 - {red}Error{endc}"
-	ColorPrint(text)
+	color_print(text)
 #end define
 
 
 def EnableTonHttpApi(local):
-	local.AddLog("start EnablePytonv3 function", "debug")
+	local.add_log("start EnablePytonv3 function", "debug")
 	user = local.buffer["user"]
 
 	ton_http_api_installer_path = pkg_resources.resource_filename('mytoninstaller.scripts', 'tonhttpapiinstaller.sh')
-	exitCode = RunAsRoot(["bash", ton_http_api_installer_path, "-u", user])
+	exitCode = run_as_root(["bash", ton_http_api_installer_path, "-u", user])
 	if exitCode == 0:
 		text = "EnableTonHttpApi - {green}OK{endc}"
 	else:
 		text = "EnableTonHttpApi - {red}Error{endc}"
-	ColorPrint(text)
+	color_print(text)
 
 
 def DangerousRecoveryValidatorConfigFile(local):
-	local.AddLog("start DangerousRecoveryValidatorConfigFile function", "info")
+	local.add_log("start DangerousRecoveryValidatorConfigFile function", "info")
 
 	# install and import cryptography library
 	args = ["pip3", "install", "cryptography"]
@@ -681,7 +687,7 @@ def DangerousRecoveryValidatorConfigFile(local):
 
 
 def CreateSymlinks(local):
-	local.AddLog("start CreateSymlinks fuction", "debug")
+	local.add_log("start CreateSymlinks fuction", "debug")
 	cport = local.buffer["cport"]
 
 	mytonctrl_file = "/usr/bin/mytonctrl"

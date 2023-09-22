@@ -92,6 +92,7 @@ echo -e "${COLOR}[2/6]${ENDC} Cloning github repository"
 cd $SOURCES_DIR
 rm -rf $SOURCES_DIR/ton
 git clone --recursive https://github.com/ton-blockchain/ton.git
+git config --global --add safe.directory $SOURCES_DIR/ton
 
 # Подготавливаем папки для компиляции
 echo -e "${COLOR}[3/6]${ENDC} Preparing for compilation"

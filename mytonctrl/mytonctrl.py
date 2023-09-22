@@ -5,28 +5,48 @@ import json
 import psutil
 import inspect
 import pkg_resources
+import socket
 
 from shutil import copyfile
 from functools import partial
 
 from mypylib.mypylib import (
-	GetGitAuthorAndRepo,
-	GetGitBranch,
-	GetGitHash,
-	CheckGitUpdate,
-	GetServiceStatus,
-	GetServiceUptime,
-	GetLoadAvg,
-	RunAsRoot,
+	# GetGitAuthorAndRepo,
+	# GetGitBranch,
+	# GetGitHash,
+	# CheckGitUpdate,
+	# GetServiceStatus,
+	# GetServiceUptime,
+	# GetLoadAvg,
+	# RunAsRoot,
+	# time2human,
+	# timeago,
+	# Timestamp2Datetime,
+	# GetTimestamp,
+	# PrintTable,
+	# ColorPrint,
+	# ColorText,
+	# bcolors,
+	# MyPyClass,
+
+	int2ip,
+	get_git_author_and_repo,
+	get_git_branch,
+	get_git_hash,
+	check_git_update,
+	get_service_status,
+	get_service_uptime,
+	get_load_avg,
+	run_as_root,
 	time2human,
 	timeago,
-	Timestamp2Datetime,
-	GetTimestamp,
-	PrintTable,
-	ColorPrint,
-	ColorText,
+	timestamp2datetime,
+	get_timestamp,
+	print_table,
+	color_print,
+	color_text,
 	bcolors,
-	MyPyClass,
+	MyPyClass
 )
 
 from mypyconsole.mypyconsole import MyPyConsole
@@ -36,6 +56,7 @@ from mytoncore.functions import (
 	Elections,
 	GetMemoryInfo,
 	GetSwapInfo,
+	GetBinGitHash,
 )
 
 import sys, getopt, os
@@ -44,7 +65,7 @@ import sys, getopt, os
 def Init(local, ton, console, argv):
 	# Load translate table
 	translate_path = pkg_resources.resource_filename('mytonctrl', 'resources/translate.json')
-	local.InitTranslator(translate_path)
+	local.init_translator(translate_path)
 
 	# this function substitutes local and ton instances if function has this args
 	def inject_globals(func):
@@ -60,72 +81,72 @@ def Init(local, ton, console, argv):
 	console.name = "MyTonCtrl"
 	console.startFunction = inject_globals(PreUp) 
 
-	console.AddItem("update", inject_globals(Update), local.Translate("update_cmd"))
-	console.AddItem("upgrade", inject_globals(Upgrade), local.Translate("upgrade_cmd"))
-	console.AddItem("installer", inject_globals(Installer), local.Translate("installer_cmd"))
-	console.AddItem("status", inject_globals(PrintStatus), local.Translate("status_cmd"))
-	console.AddItem("seqno", inject_globals(Seqno), local.Translate("seqno_cmd"))
-	console.AddItem("getconfig", inject_globals(GetConfig), local.Translate("getconfig_cmd"))
+	console.AddItem("update", inject_globals(Update), local.translate("update_cmd"))
+	console.AddItem("upgrade", inject_globals(Upgrade), local.translate("upgrade_cmd"))
+	console.AddItem("installer", inject_globals(Installer), local.translate("installer_cmd"))
+	console.AddItem("status", inject_globals(PrintStatus), local.translate("status_cmd"))
+	console.AddItem("seqno", inject_globals(Seqno), local.translate("seqno_cmd"))
+	console.AddItem("getconfig", inject_globals(GetConfig), local.translate("getconfig_cmd"))
 
-	console.AddItem("nw", inject_globals(CreatNewWallet), local.Translate("nw_cmd"))
-	console.AddItem("aw", inject_globals(ActivateWallet), local.Translate("aw_cmd"))
-	console.AddItem("wl", inject_globals(PrintWalletsList), local.Translate("wl_cmd"))
-	console.AddItem("iw", inject_globals(ImportWallet), local.Translate("iw_cmd"))
-	console.AddItem("swv", inject_globals(SetWalletVersion), local.Translate("swv_cmd"))
-	console.AddItem("ew", inject_globals(ExportWallet), local.Translate("ex_cmd"))
-	console.AddItem("dw", inject_globals(DeleteWallet), local.Translate("dw_cmd"))
+	console.AddItem("nw", inject_globals(CreatNewWallet), local.translate("nw_cmd"))
+	console.AddItem("aw", inject_globals(ActivateWallet), local.translate("aw_cmd"))
+	console.AddItem("wl", inject_globals(PrintWalletsList), local.translate("wl_cmd"))
+	console.AddItem("iw", inject_globals(ImportWallet), local.translate("iw_cmd"))
+	console.AddItem("swv", inject_globals(SetWalletVersion), local.translate("swv_cmd"))
+	console.AddItem("ew", inject_globals(ExportWallet), local.translate("ex_cmd"))
+	console.AddItem("dw", inject_globals(DeleteWallet), local.translate("dw_cmd"))
 
-	console.AddItem("vas", inject_globals(ViewAccountStatus), local.Translate("vas_cmd"))
-	console.AddItem("vah", inject_globals(ViewAccountHistory), local.Translate("vah_cmd"))
-	console.AddItem("mg", inject_globals(MoveCoins), local.Translate("mg_cmd"))
-	console.AddItem("mgtp", inject_globals(MoveCoinsThroughProxy), local.Translate("mgtp_cmd"))
+	console.AddItem("vas", inject_globals(ViewAccountStatus), local.translate("vas_cmd"))
+	console.AddItem("vah", inject_globals(ViewAccountHistory), local.translate("vah_cmd"))
+	console.AddItem("mg", inject_globals(MoveCoins), local.translate("mg_cmd"))
+	console.AddItem("mgtp", inject_globals(MoveCoinsThroughProxy), local.translate("mgtp_cmd"))
 
-	console.AddItem("nb", inject_globals(CreatNewBookmark), local.Translate("nb_cmd"))
-	console.AddItem("bl", inject_globals(PrintBookmarksList), local.Translate("bl_cmd"))
-	console.AddItem("db", inject_globals(DeleteBookmark), local.Translate("db_cmd"))
+	console.AddItem("nb", inject_globals(CreatNewBookmark), local.translate("nb_cmd"))
+	console.AddItem("bl", inject_globals(PrintBookmarksList), local.translate("bl_cmd"))
+	console.AddItem("db", inject_globals(DeleteBookmark), local.translate("db_cmd"))
 
-	# console.AddItem("nr", inject_globals(CreatNewAutoTransferRule), local.Translate("nr_cmd")) # "Добавить правило автопереводов в расписание / Create new auto transfer rule"
-	# console.AddItem("rl", inject_globals(PrintAutoTransferRulesList), local.Translate("rl_cmd")) # "Показать правила автопереводов / Show auto transfer rule list"
-	# console.AddItem("dr", inject_globals(DeleteAutoTransferRule), local.Translate("dr_cmd")) # "Удалить правило автопереводов из расписания / Delete auto transfer rule"
+	# console.AddItem("nr", inject_globals(CreatNewAutoTransferRule), local.translate("nr_cmd")) # "Добавить правило автопереводов в расписание / Create new auto transfer rule"
+	# console.AddItem("rl", inject_globals(PrintAutoTransferRulesList), local.translate("rl_cmd")) # "Показать правила автопереводов / Show auto transfer rule list"
+	# console.AddItem("dr", inject_globals(DeleteAutoTransferRule), local.translate("dr_cmd")) # "Удалить правило автопереводов из расписания / Delete auto transfer rule"
 
-	console.AddItem("nd", inject_globals(NewDomain), local.Translate("nd_cmd"))
-	console.AddItem("dl", inject_globals(PrintDomainsList), local.Translate("dl_cmd"))
-	console.AddItem("vds", inject_globals(ViewDomainStatus), local.Translate("vds_cmd"))
-	console.AddItem("dd", inject_globals(DeleteDomain), local.Translate("dd_cmd"))
+	console.AddItem("nd", inject_globals(NewDomain), local.translate("nd_cmd"))
+	console.AddItem("dl", inject_globals(PrintDomainsList), local.translate("dl_cmd"))
+	console.AddItem("vds", inject_globals(ViewDomainStatus), local.translate("vds_cmd"))
+	console.AddItem("dd", inject_globals(DeleteDomain), local.translate("dd_cmd"))
 
-	console.AddItem("ol", inject_globals(PrintOffersList), local.Translate("ol_cmd"))
-	console.AddItem("vo", inject_globals(VoteOffer), local.Translate("vo_cmd"))
-	console.AddItem("od", inject_globals(OfferDiff), local.Translate("od_cmd"))
+	console.AddItem("ol", inject_globals(PrintOffersList), local.translate("ol_cmd"))
+	console.AddItem("vo", inject_globals(VoteOffer), local.translate("vo_cmd"))
+	console.AddItem("od", inject_globals(OfferDiff), local.translate("od_cmd"))
 
-	console.AddItem("el", inject_globals(PrintElectionEntriesList), local.Translate("el_cmd"))
-	console.AddItem("ve", inject_globals(VoteElectionEntry), local.Translate("ve_cmd"))
-	console.AddItem("vl", inject_globals(PrintValidatorList), local.Translate("vl_cmd"))
-	console.AddItem("cl", inject_globals(PrintComplaintsList), local.Translate("cl_cmd"))
-	console.AddItem("vc", inject_globals(VoteComplaint), local.Translate("vc_cmd"))
+	console.AddItem("el", inject_globals(PrintElectionEntriesList), local.translate("el_cmd"))
+	console.AddItem("ve", inject_globals(VoteElectionEntry), local.translate("ve_cmd"))
+	console.AddItem("vl", inject_globals(PrintValidatorList), local.translate("vl_cmd"))
+	console.AddItem("cl", inject_globals(PrintComplaintsList), local.translate("cl_cmd"))
+	console.AddItem("vc", inject_globals(VoteComplaint), local.translate("vc_cmd"))
 
-	console.AddItem("get", inject_globals(GetSettings), local.Translate("get_cmd"))
-	console.AddItem("set", inject_globals(SetSettings), local.Translate("set_cmd"))
-	console.AddItem("xrestart", inject_globals(Xrestart), local.Translate("xrestart_cmd"))
-	console.AddItem("xlist", inject_globals(Xlist), local.Translate("xlist_cmd"))
-	#console.AddItem("gpk", inject_globals(GetPubKey), local.Translate("gpk_cmd"))
-	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.Translate("ssoc_cmd"))
-	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.Translate("isoc_cmd"))
+	console.AddItem("get", inject_globals(GetSettings), local.translate("get_cmd"))
+	console.AddItem("set", inject_globals(SetSettings), local.translate("set_cmd"))
+	console.AddItem("xrestart", inject_globals(Xrestart), local.translate("xrestart_cmd"))
+	console.AddItem("xlist", inject_globals(Xlist), local.translate("xlist_cmd"))
+	#console.AddItem("gpk", inject_globals(GetPubKey), local.translate("gpk_cmd"))
+	#console.AddItem("ssoc", inject_globals(SignShardOverlayCert), local.translate("ssoc_cmd"))
+	#console.AddItem("isoc", inject_globals(ImportShardOverlayCert), local.translate("isoc_cmd"))
 
-	#console.AddItem("new_nomination_controller", inject_globals(NewNominationController), local.Translate("new_controller_cmd"))
-	#console.AddItem("get_nomination_controller_data", inject_globals(GetNominationControllerData), local.Translate("get_nomination_controller_data_cmd"))
-	#console.AddItem("deposit_to_nomination_controller", inject_globals(DepositToNominationController), local.Translate("deposit_to_controller_cmd"))
-	#console.AddItem("withdraw_from_nomination_controller", inject_globals(WithdrawFromNominationController), local.Translate("withdraw_from_nomination_controller_cmd"))
-	#console.AddItem("request_to_nomination_controller", inject_globals(SendRequestToNominationController), local.Translate("request_to_nomination_controller_cmd"))
-	#console.AddItem("new_restricted_wallet", inject_globals(NewRestrictedWallet), local.Translate("new_restricted_wallet_cmd"))
+	#console.AddItem("new_nomination_controller", inject_globals(NewNominationController), local.translate("new_controller_cmd"))
+	#console.AddItem("get_nomination_controller_data", inject_globals(GetNominationControllerData), local.translate("get_nomination_controller_data_cmd"))
+	#console.AddItem("deposit_to_nomination_controller", inject_globals(DepositToNominationController), local.translate("deposit_to_controller_cmd"))
+	#console.AddItem("withdraw_from_nomination_controller", inject_globals(WithdrawFromNominationController), local.translate("withdraw_from_nomination_controller_cmd"))
+	#console.AddItem("request_to_nomination_controller", inject_globals(SendRequestToNominationController), local.translate("request_to_nomination_controller_cmd"))
+	#console.AddItem("new_restricted_wallet", inject_globals(NewRestrictedWallet), local.translate("new_restricted_wallet_cmd"))
 
-	console.AddItem("new_pool", inject_globals(NewPool), local.Translate("new_pool_cmd"))
-	console.AddItem("pools_list", inject_globals(PrintPoolsList), local.Translate("pools_list_cmd"))
-	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.Translate("get_pool_data_cmd"))
-	console.AddItem("activate_pool", inject_globals(ActivatePool), local.Translate("activate_pool_cmd"))
-	console.AddItem("deposit_to_pool", inject_globals(DepositToPool), local.Translate("deposit_to_pool_cmd"))
-	console.AddItem("withdraw_from_pool", inject_globals(WithdrawFromPool), local.Translate("withdraw_from_pool_cmd"))
-	console.AddItem("delete_pool", inject_globals(DeletePool), local.Translate("delete_pool_cmd"))
-	#console.AddItem("update_validator_set", inject_globals(UpdateValidatorSet), local.Translate("update_validator_set_cmd"))
+	console.AddItem("new_pool", inject_globals(NewPool), local.translate("new_pool_cmd"))
+	console.AddItem("pools_list", inject_globals(PrintPoolsList), local.translate("pools_list_cmd"))
+	console.AddItem("get_pool_data", inject_globals(GetPoolData), local.translate("get_pool_data_cmd"))
+	console.AddItem("activate_pool", inject_globals(ActivatePool), local.translate("activate_pool_cmd"))
+	console.AddItem("deposit_to_pool", inject_globals(DepositToPool), local.translate("deposit_to_pool_cmd"))
+	console.AddItem("withdraw_from_pool", inject_globals(WithdrawFromPool), local.translate("withdraw_from_pool_cmd"))
+	console.AddItem("delete_pool", inject_globals(DeletePool), local.translate("delete_pool_cmd"))
+	#console.AddItem("update_validator_set", inject_globals(UpdateValidatorSet), local.translate("update_validator_set_cmd"))
 
 	# console.AddItem("pt", inject_globals(PrintTest), "PrintTest")
 	# console.AddItem("sl", inject_globals(sl), "sl")
@@ -155,13 +176,14 @@ def Init(local, ton, console, argv):
 			ton.walletsDir = wallets
 	#end for
 
-	local.db["config"]["logLevel"] = "debug"
-	local.db["config"]["isLocaldbSaving"] = True
-	local.Run()
+	local.db.config.logLevel = "debug"
+	local.db.config.isLocaldbSaving = False
+	local.run()
 #end define
 
-def PreUp(local):
+def PreUp(local, ton):
 	CheckMytonctrlUpdate(local)
+	check_vport(local, ton)
 	# CheckTonUpdate()
 #end define
 
@@ -197,71 +219,95 @@ def GetAuthorRepoBranchFromArgs(args):
 	return data
 #end define
 
-def Update(local, args):
-	# add safe directory to git
-	gitPath = "/usr/src/mytonctrl"
-	subprocess.run(["git", "config", "--global", "--add", "safe.directory", gitPath])
+def check_vport(local, ton):
+	vconfig = ton.GetValidatorConfig()
+	addr = vconfig.addrs.pop()
+	ip = int2ip(addr.ip)
+	with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
+		result = client_socket.connect_ex((ip, addr.port))
+	if result != 0:
+		color_print(local.translate("vport_error"))
+#end define
+
+def check_git(input_args, default_repo):
+	src_dir = "/usr/src"
+	git_path = f"{src_dir}/{default_repo}"
+	default_author = "ton-blockchain"
+	default_branch = "master"
 
 	# Get author, repo, branch
-	author, repo = GetGitAuthorAndRepo(gitPath)
-	branch = GetGitBranch(gitPath)
-	
+	local_author, local_repo = get_git_author_and_repo(git_path)
+	local_branch = get_git_branch(git_path)
+
 	# Set author, repo, branch
-	data = GetAuthorRepoBranchFromArgs(args)
-	author = data.get("author", author)
-	repo = data.get("repo", repo)
-	branch = data.get("branch", branch)
+	data = GetAuthorRepoBranchFromArgs(input_args)
+	need_author = data.get("author")
+	need_repo = data.get("repo")
+	need_branch = data.get("branch")
+
+	# Check if remote repo is different from default
+	if ((need_author is None and local_author != default_author) or 
+		(need_repo is None and local_repo != default_repo)):
+		remote_url = f"https://github.com/{local_author}/{local_repo}/tree/{need_branch if need_branch else local_branch}"
+		raise Exception(f"update error: You are on {remote_url} remote url, to update to the tip use `update {remote_url}` command")
+	elif need_branch is None and local_branch != default_branch:
+		raise Exception(f"update error: You are on {local_branch} branch, to update to the tip of {local_branch} branch use `update {local_branch}` command")
+	#end if
+
+	if need_author is None:
+		need_author = local_author
+	if need_repo is None:
+		need_repo = local_repo
+	if need_branch is None:
+		need_branch = local_branch
+	#end if
+
+	return need_author, need_repo, need_branch
+#end define
+
+def Update(local, args):
+	repo = "mytonctrl"
+	author, repo, branch = check_git(args, repo)
 
 	# Run script
 	update_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/update.sh')
 	runArgs = ["bash", update_script_path, "-a", author, "-r", repo, "-b", branch]
-	exitCode = RunAsRoot(runArgs)
+	exitCode = run_as_root(runArgs)
 	if exitCode == 0:
 		text = "Update - {green}OK{endc}"
 	else:
 		text = "Update - {red}Error{endc}"
-	ColorPrint(text)
-	local.Exit()
+	color_print(text)
+	local.exit()
 #end define
 
 def Upgrade(args):
-	# add safe directory to git
-	gitPath = "/usr/src/ton"
-	subprocess.run(["git", "config", "--global", "--add", "safe.directory", gitPath])
-
-	# Get author, repo, branch
-	author, repo = GetGitAuthorAndRepo(gitPath)
-	branch = GetGitBranch(gitPath)
-	
-	# Set author, repo, branch
-	data = GetAuthorRepoBranchFromArgs(args)
-	author = data.get("author", author)
-	repo = data.get("repo", repo)
-	branch = data.get("branch", branch)
+	repo = "ton"
+	author, repo, branch = check_git(args, repo)
 
 	# Run script
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
 	runArgs = ["bash", upgrade_script_path, "-a", author, "-r", repo, "-b", branch]
-	exitCode = RunAsRoot(runArgs)
+	exitCode = run_as_root(runArgs)
 	if exitCode == 0:
 		text = "Upgrade - {green}OK{endc}"
 	else:
 		text = "Upgrade - {red}Error{endc}"
-	ColorPrint(text)
+	color_print(text)
 #end define
 
 def CheckMytonctrlUpdate(local):
-	gitPath = local.buffer.get("myDir")
-	result = CheckGitUpdate(gitPath)
+	git_path = local.buffer.my_dir
+	result = check_git_update(git_path)
 	if result is True:
-		ColorPrint(local.Translate("mytonctrl_update_available"))
+		color_print(local.translate("mytonctrl_update_available"))
 #end define
 
 def CheckTonUpdate(local):
-	gitPath = "/usr/src/ton"
-	result = CheckGitUpdate(gitPath)
+	git_path = "/usr/src/ton"
+	result = check_git_update(git_path)
 	if result is True:
-		ColorPrint(local.Translate("ton_update_available"))
+		color_print(local.translate("ton_update_available"))
 #end define
 
 def PrintTest(local, args):
@@ -330,28 +376,28 @@ def PrintTonStatus(local, startWorkTime, totalValidators, onlineValidators, shar
 	allOffers = offersNumber.get("all")
 	newComplaints = complaintsNumber.get("new")
 	allComplaints = complaintsNumber.get("all")
-	tps1_text = bcolors.Green(tps1)
-	tps5_text = bcolors.Green(tps5)
-	tps15_text = bcolors.Green(tps15)
-	tps_text = local.Translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
+	tps1_text = bcolors.green_text(tps1)
+	tps5_text = bcolors.green_text(tps5)
+	tps15_text = bcolors.green_text(tps15)
+	tps_text = local.translate("ton_status_tps").format(tps1_text, tps5_text, tps15_text)
 	onlineValidators_text = GetColorInt(onlineValidators, border=allValidators*2/3, logic="more")
-	allValidators_text = bcolors.Yellow(allValidators)
-	validators_text = local.Translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
-	shards_text = local.Translate("ton_status_shards").format(bcolors.Green(shardsNumber))
-	newOffers_text = bcolors.Green(newOffers)
-	allOffers_text = bcolors.Yellow(allOffers)
-	offers_text = local.Translate("ton_status_offers").format(newOffers_text, allOffers_text)
-	newComplaints_text = bcolors.Green(newComplaints)
-	allComplaints_text = bcolors.Yellow(allComplaints)
-	complaints_text = local.Translate("ton_status_complaints").format(newComplaints_text, allComplaints_text)
+	allValidators_text = bcolors.yellow_text(allValidators)
+	validators_text = local.translate("ton_status_validators").format(onlineValidators_text, allValidators_text)
+	shards_text = local.translate("ton_status_shards").format(bcolors.green_text(shardsNumber))
+	newOffers_text = bcolors.green_text(newOffers)
+	allOffers_text = bcolors.yellow_text(allOffers)
+	offers_text = local.translate("ton_status_offers").format(newOffers_text, allOffers_text)
+	newComplaints_text = bcolors.green_text(newComplaints)
+	allComplaints_text = bcolors.yellow_text(allComplaints)
+	complaints_text = local.translate("ton_status_complaints").format(newComplaints_text, allComplaints_text)
 
 	if startWorkTime == 0:
-		election_text = bcolors.Yellow("closed")
+		election_text = bcolors.yellow_text("closed")
 	else:
-		election_text = bcolors.Green("open")
-	election_text = local.Translate("ton_status_election").format(election_text)
+		election_text = bcolors.green_text("open")
+	election_text = local.translate("ton_status_election").format(election_text)
 
-	ColorPrint(local.Translate("ton_status_head"))
+	color_print(local.translate("ton_status_head"))
 	print(tps_text)
 	print(validators_text)
 	print(shards_text)
@@ -367,7 +413,7 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	walletAddr = validatorWallet.addrB64
 	walletBalance = validatorAccount.balance
 	cpuNumber = psutil.cpu_count()
-	loadavg = GetLoadAvg()
+	loadavg = get_load_avg()
 	cpuLoad1 = loadavg[0]
 	cpuLoad5 = loadavg[1]
 	cpuLoad15 = loadavg[2]
@@ -377,19 +423,19 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	validatorOutOfSync = validatorStatus.get("outOfSync")
 
 	validatorIndex_text = GetColorInt(validatorIndex, 0, logic="more")
-	validatorIndex_text = local.Translate("local_status_validator_index").format(validatorIndex_text)
+	validatorIndex_text = local.translate("local_status_validator_index").format(validatorIndex_text)
 	validatorEfficiency_text = GetColorInt(validatorEfficiency, 10, logic="more", ending=" %")
-	validatorEfficiency_text = local.Translate("local_status_validator_efficiency").format(validatorEfficiency_text)
-	adnlAddr_text = local.Translate("local_status_adnl_addr").format(bcolors.Yellow(adnlAddr))
-	walletAddr_text = local.Translate("local_status_wallet_addr").format(bcolors.Yellow(walletAddr))
-	walletBalance_text = local.Translate("local_status_wallet_balance").format(bcolors.Green(walletBalance))
+	validatorEfficiency_text = local.translate("local_status_validator_efficiency").format(validatorEfficiency_text)
+	adnlAddr_text = local.translate("local_status_adnl_addr").format(bcolors.yellow_text(adnlAddr))
+	walletAddr_text = local.translate("local_status_wallet_addr").format(bcolors.yellow_text(walletAddr))
+	walletBalance_text = local.translate("local_status_wallet_balance").format(bcolors.green_text(walletBalance))
 
 	# CPU status
-	cpuNumber_text = bcolors.Yellow(cpuNumber)
+	cpuNumber_text = bcolors.yellow_text(cpuNumber)
 	cpuLoad1_text = GetColorInt(cpuLoad1, cpuNumber, logic="less")
 	cpuLoad5_text = GetColorInt(cpuLoad5, cpuNumber, logic="less")
 	cpuLoad15_text = GetColorInt(cpuLoad15, cpuNumber, logic="less")
-	cpuLoad_text = local.Translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
+	cpuLoad_text = local.translate("local_status_cpu_load").format(cpuNumber_text, cpuLoad1_text, cpuLoad5_text, cpuLoad15_text)
 
 	# Memory status
 	ramUsage = memoryInfo.get("usage")
@@ -404,20 +450,20 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 	ramLoad_text = ramLoad_text.format(cyan=bcolors.cyan, default=bcolors.default, endc=bcolors.endc, data=ramUsage_text, percent=ramUsagePercent_text)
 	swapLoad_text = "{cyan}swap:[{default}{data}, {percent}{cyan}]{endc}"
 	swapLoad_text = swapLoad_text.format(cyan=bcolors.cyan, default=bcolors.default, endc=bcolors.endc, data=swapUsage_text, percent=swapUsagePercent_text)
-	memoryLoad_text = local.Translate("local_status_memory").format(ramLoad_text, swapLoad_text)
+	memoryLoad_text = local.translate("local_status_memory").format(ramLoad_text, swapLoad_text)
 
 	# Network status
 	netLoad1_text = GetColorInt(netLoad1, 300, logic="less")
 	netLoad5_text = GetColorInt(netLoad5, 300, logic="less")
 	netLoad15_text = GetColorInt(netLoad15, 300, logic="less")
-	netLoad_text = local.Translate("local_status_net_load").format(netLoad1_text, netLoad5_text, netLoad15_text)
+	netLoad_text = local.translate("local_status_net_load").format(netLoad1_text, netLoad5_text, netLoad15_text)
 
 	# Disks status
 	disksLoad_data = list()
 	for key, item in disksLoadAvg.items():
-		diskLoad1_text = bcolors.Green(item[0])  # TODO: this variables is unused. Why?
-		diskLoad5_text = bcolors.Green(item[1])  # TODO: this variables is unused. Why?
-		diskLoad15_text = bcolors.Green(item[2])
+		diskLoad1_text = bcolors.green_text(item[0])  # TODO: this variables is unused. Why?
+		diskLoad5_text = bcolors.green_text(item[1])  # TODO: this variables is unused. Why?
+		diskLoad15_text = bcolors.green_text(item[2])
 		diskLoadPercent1_text = GetColorInt(disksLoadPercentAvg[key][0], 80, logic="less", ending="%")  # TODO: this variables is unused. Why?
 		diskLoadPercent5_text = GetColorInt(disksLoadPercentAvg[key][1], 80, logic="less", ending="%")  # TODO: this variables is unused. Why?
 		diskLoadPercent15_text = GetColorInt(disksLoadPercentAvg[key][2], 80, logic="less", ending="%")
@@ -426,39 +472,40 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 		disksLoad_buff = buff.format(diskLoad15_text, diskLoadPercent15_text)
 		disksLoad_data.append(disksLoad_buff)
 	disksLoad_data = ", ".join(disksLoad_data)
-	disksLoad_text = local.Translate("local_status_disks_load").format(disksLoad_data)
+	disksLoad_text = local.translate("local_status_disks_load").format(disksLoad_data)
 
 	# Thread status
-	mytoncoreStatus_bool = GetServiceStatus("mytoncore")
-	validatorStatus_bool = GetServiceStatus("validator")
-	mytoncoreUptime = GetServiceUptime("mytoncore")
-	validatorUptime = GetServiceUptime("validator")
-	mytoncoreUptime_text = bcolors.Green(time2human(mytoncoreUptime))
-	validatorUptime_text = bcolors.Green(time2human(validatorUptime))
+	mytoncoreStatus_bool = get_service_status("mytoncore")
+	validatorStatus_bool = get_service_status("validator")
+	mytoncoreUptime = get_service_uptime("mytoncore")
+	validatorUptime = get_service_uptime("validator")
+	mytoncoreUptime_text = bcolors.green_text(time2human(mytoncoreUptime))
+	validatorUptime_text = bcolors.green_text(time2human(validatorUptime))
 	mytoncoreStatus = GetColorStatus(mytoncoreStatus_bool)
 	validatorStatus = GetColorStatus(validatorStatus_bool)
-	mytoncoreStatus_text = local.Translate("local_status_mytoncore_status").format(mytoncoreStatus, mytoncoreUptime_text)
-	validatorStatus_text = local.Translate("local_status_validator_status").format(validatorStatus, validatorUptime_text)
-	validatorOutOfSync_text = local.Translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
+	mytoncoreStatus_text = local.translate("local_status_mytoncore_status").format(mytoncoreStatus, mytoncoreUptime_text)
+	validatorStatus_text = local.translate("local_status_validator_status").format(validatorStatus, validatorUptime_text)
+	validatorOutOfSync_text = local.translate("local_status_validator_out_of_sync").format(GetColorInt(validatorOutOfSync, 20, logic="less", ending=" s"))
 	dbSize_text = GetColorInt(dbSize, 1000, logic="less", ending=" Gb")
 	dbUsage_text = GetColorInt(dbUsage, 80, logic="less", ending="%")
-	dbStatus_text = local.Translate("local_status_db").format(dbSize_text, dbUsage_text)
+	dbStatus_text = local.translate("local_status_db").format(dbSize_text, dbUsage_text)
 	
 	# Mytonctrl and validator git hash
 	mtcGitPath = "/usr/src/mytonctrl"
 	validatorGitPath = "/usr/src/ton"
-	mtcGitHash = GetGitHash(mtcGitPath, short=True)
-	validatorGitHash = GetGitHash(validatorGitPath, short=True)
-	mtcGitBranch = GetGitBranch(mtcGitPath)
-	validatorGitBranch = GetGitBranch(validatorGitPath)
-	mtcGitHash_text = bcolors.Yellow(mtcGitHash)
-	validatorGitHash_text = bcolors.Yellow(validatorGitHash)
-	mtcGitBranch_text = bcolors.Yellow(mtcGitBranch)
-	validatorGitBranch_text = bcolors.Yellow(validatorGitBranch)
-	mtcVersion_text = local.Translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
-	validatorVersion_text = local.Translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
+	validatorBinGitPath = "/usr/bin/ton/validator-engine/validator-engine"
+	mtcGitHash = get_git_hash(mtcGitPath, short=True)
+	validatorGitHash = GetBinGitHash(validatorBinGitPath, short=True)
+	mtcGitBranch = get_git_branch(mtcGitPath)
+	validatorGitBranch = get_git_branch(validatorGitPath)
+	mtcGitHash_text = bcolors.yellow_text(mtcGitHash)
+	validatorGitHash_text = bcolors.yellow_text(validatorGitHash)
+	mtcGitBranch_text = bcolors.yellow_text(mtcGitBranch)
+	validatorGitBranch_text = bcolors.yellow_text(validatorGitBranch)
+	mtcVersion_text = local.translate("local_status_version_mtc").format(mtcGitHash_text, mtcGitBranch_text)
+	validatorVersion_text = local.translate("local_status_version_validator").format(validatorGitHash_text, validatorGitBranch_text)
 
-	ColorPrint(local.Translate("local_status_head"))
+	color_print(local.translate("local_status_head"))
 	print(validatorIndex_text)
 	print(validatorEfficiency_text)
 	print(adnlAddr_text)
@@ -480,25 +527,25 @@ def PrintLocalStatus(local, adnlAddr, validatorIndex, validatorEfficiency, valid
 
 def GetColorInt(data, border, logic, ending=None):
 	if data is None:
-		result = bcolors.Green("n/a")
+		result = bcolors.green_text("n/a")
 	elif logic == "more":
 		if data >= border:
-			result = bcolors.Green(data, ending)
+			result = bcolors.green_text(data, ending)
 		else:
-			result = bcolors.Red(data, ending)
+			result = bcolors.red_text(data, ending)
 	elif logic == "less":
 		if data <= border:
-			result = bcolors.Green(data, ending)
+			result = bcolors.green_text(data, ending)
 		else:
-			result = bcolors.Red(data, ending)
+			result = bcolors.red_text(data, ending)
 	return result
 #end define
 
 def GetColorStatus(input):
 	if input == True:
-		result = bcolors.Green("working")
+		result = bcolors.green_text("working")
 	else:
-		result = bcolors.Red("not working")
+		result = bcolors.red_text("not working")
 	return result
 #end define
 
@@ -510,18 +557,18 @@ def PrintTonConfig(local, fullConfigAddr, fullElectorAddr, config15, config17):
 	minStake = config17["minStake"]
 	maxStake = config17["maxStake"]
 
-	fullConfigAddr_text = local.Translate("ton_config_configurator_addr").format(bcolors.Yellow(fullConfigAddr))
-	fullElectorAddr_text = local.Translate("ton_config_elector_addr").format(bcolors.Yellow(fullElectorAddr))
-	validatorsElectedFor_text = bcolors.Yellow(validatorsElectedFor)
-	electionsStartBefore_text = bcolors.Yellow(electionsStartBefore)
-	electionsEndBefore_text = bcolors.Yellow(electionsEndBefore)
-	stakeHeldFor_text = bcolors.Yellow(stakeHeldFor)
-	elections_text = local.Translate("ton_config_elections").format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text)
-	minStake_text = bcolors.Yellow(minStake)
-	maxStake_text = bcolors.Yellow(maxStake)
-	stake_text = local.Translate("ton_config_stake").format(minStake_text, maxStake_text)
+	fullConfigAddr_text = local.translate("ton_config_configurator_addr").format(bcolors.yellow_text(fullConfigAddr))
+	fullElectorAddr_text = local.translate("ton_config_elector_addr").format(bcolors.yellow_text(fullElectorAddr))
+	validatorsElectedFor_text = bcolors.yellow_text(validatorsElectedFor)
+	electionsStartBefore_text = bcolors.yellow_text(electionsStartBefore)
+	electionsEndBefore_text = bcolors.yellow_text(electionsEndBefore)
+	stakeHeldFor_text = bcolors.yellow_text(stakeHeldFor)
+	elections_text = local.translate("ton_config_elections").format(validatorsElectedFor_text, electionsStartBefore_text, electionsEndBefore_text, stakeHeldFor_text)
+	minStake_text = bcolors.yellow_text(minStake)
+	maxStake_text = bcolors.yellow_text(maxStake)
+	stake_text = local.translate("ton_config_stake").format(minStake_text, maxStake_text)
 
-	ColorPrint(local.Translate("ton_config_head"))
+	color_print(local.translate("ton_config_head"))
 	print(fullConfigAddr_text)
 	print(fullElectorAddr_text)
 	print(elections_text)
@@ -546,22 +593,22 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 	startNextElection = startElection + validatorsElectedFor
 
 	# timestamp to datetime
-	rootWorkchainEnabledTime = Timestamp2Datetime(rootWorkchainEnabledTime_int)
-	startValidationTime = Timestamp2Datetime(startValidation)
-	endValidationTime = Timestamp2Datetime(endValidation)
-	startElectionTime = Timestamp2Datetime(startElection)
-	endElectionTime = Timestamp2Datetime(endElection)
-	startNextElectionTime = Timestamp2Datetime(startNextElection)
+	rootWorkchainEnabledTime = timestamp2datetime(rootWorkchainEnabledTime_int)
+	startValidationTime = timestamp2datetime(startValidation)
+	endValidationTime = timestamp2datetime(endValidation)
+	startElectionTime = timestamp2datetime(startElection)
+	endElectionTime = timestamp2datetime(endElection)
+	startNextElectionTime = timestamp2datetime(startNextElection)
 
 	# datetime to color text
-	rootWorkchainEnabledTime_text = local.Translate("times_root_workchain_enabled_time").format(bcolors.Yellow(rootWorkchainEnabledTime))
-	startValidationTime_text = local.Translate("times_start_validation_time").format(GetColorTime(startValidationTime, startValidation))
-	endValidationTime_text = local.Translate("times_end_validation_time").format(GetColorTime(endValidationTime, endValidation))
-	startElectionTime_text = local.Translate("times_start_election_time").format(GetColorTime(startElectionTime, startElection))
-	endElectionTime_text = local.Translate("times_end_election_time").format(GetColorTime(endElectionTime, endElection))
-	startNextElectionTime_text = local.Translate("times_start_next_election_time").format(GetColorTime(startNextElectionTime, startNextElection))
+	rootWorkchainEnabledTime_text = local.translate("times_root_workchain_enabled_time").format(bcolors.yellow_text(rootWorkchainEnabledTime))
+	startValidationTime_text = local.translate("times_start_validation_time").format(GetColorTime(startValidationTime, startValidation))
+	endValidationTime_text = local.translate("times_end_validation_time").format(GetColorTime(endValidationTime, endValidation))
+	startElectionTime_text = local.translate("times_start_election_time").format(GetColorTime(startElectionTime, startElection))
+	endElectionTime_text = local.translate("times_end_election_time").format(GetColorTime(endElectionTime, endElection))
+	startNextElectionTime_text = local.translate("times_start_next_election_time").format(GetColorTime(startNextElectionTime, startNextElection))
 
-	ColorPrint(local.Translate("times_head"))
+	color_print(local.translate("times_head"))
 	print(rootWorkchainEnabledTime_text)
 	print(startValidationTime_text)
 	print(endValidationTime_text)
@@ -573,9 +620,9 @@ def PrintTimes(local, rootWorkchainEnabledTime_int, startWorkTime, oldStartWorkT
 def GetColorTime(datetime, timestamp):
 	newTimestamp = GetTimestamp()
 	if timestamp > newTimestamp:
-		result = bcolors.Green(datetime)
+		result = bcolors.green_text(datetime)
 	else:
-		result = bcolors.Yellow(datetime)
+		result = bcolors.yellow_text(datetime)
 	return result
 #end define
 
@@ -583,7 +630,7 @@ def Seqno(ton, args):
 	try:
 		walletName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} seqno <wallet-name>")
+		color_print("{red}Bad args. Usage:{endc} seqno <wallet-name>")
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	seqno = ton.GetSeqno(wallet)
@@ -606,7 +653,7 @@ def CreatNewWallet(ton, args):
 		else:
 			subwallet = 698983191 + workchain # 0x29A9A317 + workchain
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name> [<version> <subwallet>]")
+		color_print("{red}Bad args. Usage:{endc} nw <workchain-id> <wallet-name> [<version> <subwallet>]")
 		return
 	wallet = ton.CreateWallet(walletName, workchain, version, subwallet=subwallet)
 	table = list()
@@ -625,10 +672,10 @@ def ActivateWallet(local, ton, args):
 	else:
 		wallet = ton.GetLocalWallet(walletName)
 		if not os.path.isfile(wallet.bocFilePath):
-			local.AddLog("Wallet {walletName} already activated".format(walletName=walletName), "warning")
+			local.add_log("Wallet {walletName} already activated".format(walletName=walletName), "warning")
 			return
 		ton.ActivateWallet(wallet)
-	ColorPrint("ActivateWallet - {green}OK{endc}")
+	color_print("ActivateWallet - {green}OK{endc}")
 #end define
 
 def PrintWalletsList(ton, args):
@@ -650,17 +697,17 @@ def ImportWalletFromFile(local, ton, args):
 	try:
 		filePath = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} iw <wallet-path>")
+		color_print("{red}Bad args. Usage:{endc} iw <wallet-path>")
 		return
 	if (".addr" in filePath):
 		filePath = filePath.replace(".addr", '')
 	if (".pk" in filePath):
 		filePath = filePath.replace(".pk", '')
 	if os.path.isfile(filePath + ".addr") == False:
-		local.AddLog("ImportWalletFromFile error: Address file not found: " + filePath, "error")
+		local.add_log("ImportWalletFromFile error: Address file not found: " + filePath, "error")
 		return
 	if os.path.isfile(filePath + ".pk") == False:
-		local.AddLog("ImportWalletFromFile error: Private key not found: " + filePath, "error")
+		local.add_log("ImportWalletFromFile error: Private key not found: " + filePath, "error")
 		return
 	if '/' in filePath:
 		walletName = filePath[filePath.rfind('/')+1:]
@@ -668,7 +715,7 @@ def ImportWalletFromFile(local, ton, args):
 		walletName = filePath
 	copyfile(filePath + ".addr", ton.walletsDir + walletName + ".addr")
 	copyfile(filePath + ".pk", ton.walletsDir + walletName + ".pk")
-	ColorPrint("ImportWalletFromFile - {green}OK{endc}")
+	color_print("ImportWalletFromFile - {green}OK{endc}")
 #end define
 
 def ImportWallet(ton, args):
@@ -676,7 +723,7 @@ def ImportWallet(ton, args):
 		addr = args[0]
 		key = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} iw <wallet-addr> <wallet-secret-key>")
+		color_print("{red}Bad args. Usage:{endc} iw <wallet-addr> <wallet-secret-key>")
 		return
 	name = ton.ImportWallet(addr, key)
 	print("Wallet name:", name)
@@ -687,17 +734,17 @@ def SetWalletVersion(ton, args):
 		addr = args[0]
 		version = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} swv <wallet-addr> <wallet-version>")
+		color_print("{red}Bad args. Usage:{endc} swv <wallet-addr> <wallet-version>")
 		return
 	ton.SetWalletVersion(addr, version)
-	ColorPrint("SetWalletVersion - {green}OK{endc}")
+	color_print("SetWalletVersion - {green}OK{endc}")
 #end define
 
 def ExportWallet(ton, args):
 	try:
 		name = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} ew <wallet-name>")
+		color_print("{red}Bad args. Usage:{endc} ew <wallet-name>")
 		return
 	addr, key = ton.ExportWallet(name)
 	print("Wallet name:", name)
@@ -709,18 +756,18 @@ def DeleteWallet(ton, args):
 	try:
 		walletName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} dw <wallet-name>")
+		color_print("{red}Bad args. Usage:{endc} dw <wallet-name>")
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	wallet.Delete()
-	ColorPrint("DeleteWallet - {green}OK{endc}")
+	color_print("DeleteWallet - {green}OK{endc}")
 #end define
 
 def ViewAccountStatus(ton, args):
 	try:
 		addrB64 = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vas <account-addr>")
+		color_print("{red}Bad args. Usage:{endc} vas <account-addr>")
 		return
 	addrB64 = ton.GetDestinationAddr(addrB64)
 	account = ton.GetAccount(addrB64)
@@ -739,7 +786,7 @@ def ViewAccountHistory(ton, args):
 		addr = args[0]
 		limit = int(args[1])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vah <account-addr> <limit>")
+		color_print("{red}Bad args. Usage:{endc} vah <account-addr> <limit>")
 		return
 	table = GetHistoryTable(ton, addr, limit)
 	PrintTable(table)
@@ -750,7 +797,7 @@ def GetHistoryTable(ton, addr, limit):
 	account = ton.GetAccount(addr)
 	history = ton.GetAccountHistory(account, limit)
 	table = list()
-	typeText = ColorText("{red}{bold}{endc}")
+	typeText = color_text("{red}{bold}{endc}")
 	table += [["Time", typeText, "Coins", "From/To"]]
 	for message in history:
 		if message.srcAddr is None:
@@ -758,13 +805,13 @@ def GetHistoryTable(ton, addr, limit):
 		srcAddrFull = f"{message.srcWorkchain}:{message.srcAddr}"
 		destAddFull = f"{message.destWorkchain}:{message.destAddr}"
 		if srcAddrFull == account.addrFull:
-			type = ColorText("{red}{bold}>>>{endc}")
+			type = color_text("{red}{bold}>>>{endc}")
 			fromto = destAddFull
 		else:
-			type = ColorText("{blue}{bold}<<<{endc}")
+			type = color_text("{blue}{bold}<<<{endc}")
 			fromto = srcAddrFull
 		fromto = ton.AddrFull2AddrB64(fromto)
-		#datetime = Timestamp2Datetime(message.time, "%Y.%m.%d %H:%M:%S")
+		#datetime = timestamp2datetime(message.time, "%Y.%m.%d %H:%M:%S")
 		datetime = timeago(message.time)
 		table += [[datetime, type, message.value, fromto]]
 	return table
@@ -777,12 +824,12 @@ def MoveCoins(ton, args):
 		amount = args[2]
 		flags = args[3:]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
+		color_print("{red}Bad args. Usage:{endc} mg <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
 	ton.MoveCoins(wallet, destination, amount, flags=flags)
-	ColorPrint("MoveCoins - {green}OK{endc}")
+	color_print("MoveCoins - {green}OK{endc}")
 #end define
 
 def MoveCoinsThroughProxy(ton, args):
@@ -791,12 +838,12 @@ def MoveCoinsThroughProxy(ton, args):
 		destination = args[1]
 		amount = args[2]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
+		color_print("{red}Bad args. Usage:{endc} mgtp <wallet-name> <account-addr | bookmark-name> <amount>")
 		return
 	wallet = ton.GetLocalWallet(walletName)
 	destination = ton.GetDestinationAddr(destination)
 	ton.MoveCoinsThroughProxy(wallet, destination, amount)
-	ColorPrint("MoveCoinsThroughProxy - {green}OK{endc}")
+	color_print("MoveCoinsThroughProxy - {green}OK{endc}")
 #end define
 
 def CreatNewBookmark(ton, args):
@@ -804,7 +851,7 @@ def CreatNewBookmark(ton, args):
 		name = args[0]
 		addr = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr | domain-name>")
+		color_print("{red}Bad args. Usage:{endc} nb <bookmark-name> <account-addr | domain-name>")
 		return
 	if ton.IsAddr(addr):
 		type = "account"
@@ -817,7 +864,7 @@ def CreatNewBookmark(ton, args):
 	bookmark["type"] = type
 	bookmark["addr"] = addr
 	ton.AddBookmark(bookmark)
-	ColorPrint("CreatNewBookmark - {green}OK{endc}")
+	color_print("CreatNewBookmark - {green}OK{endc}")
 #end define
 
 def PrintBookmarksList(ton, args):
@@ -841,10 +888,10 @@ def DeleteBookmark(ton, args):
 		name = args[0]
 		type = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} db <bookmark-name> <bookmark-type>")
+		color_print("{red}Bad args. Usage:{endc} db <bookmark-name> <bookmark-type>")
 		return
 	ton.DeleteBookmark(name, type)
-	ColorPrint("DeleteBookmark - {green}OK{endc}")
+	color_print("DeleteBookmark - {green}OK{endc}")
 #end define
 
 # def CreatNewAutoTransferRule(args):
@@ -852,13 +899,13 @@ def DeleteBookmark(ton, args):
 # 		name = args[0]
 # 		addr = args[1]
 # 	except:
-# 		ColorPrint("{red}Bad args. Usage:{endc} nr <rule-name> <account-addr | domain-name>")
+# 		color_print("{red}Bad args. Usage:{endc} nr <rule-name> <account-addr | domain-name>")
 # 		return
 # 	rule = dict()
 # 	rule["name"] = name
 # 	rule["addr"] = addr
 # 	ton.AddAutoTransferRule(rule)
-# 	ColorPrint("CreatNewAutoTransferRule - {green}OK{endc}")
+# 	color_print("CreatNewAutoTransferRule - {green}OK{endc}")
 # #end define
 
 # def PrintAutoTransferRulesList(args):
@@ -897,20 +944,20 @@ def PrintOffersList(ton, args):
 			if "hash" not in args:
 				hash = Reduct(hash)
 			if isPassed == True:
-				isPassed = bcolors.Green("true")
+				isPassed = bcolors.green_text("true")
 			if isPassed == False:
-				isPassed = bcolors.Red("false")
+				isPassed = bcolors.red_text("false")
 			table += [[hash, votedValidators, wl, approvedPercent_text, isPassed]]
 		PrintTable(table)
 #end define
 
 def VoteOffer(ton, args):
 	if len(args) == 0:
-		ColorPrint("{red}Bad args. Usage:{endc} vo <offer-hash>")
+		color_print("{red}Bad args. Usage:{endc} vo <offer-hash>")
 		return
 	for offerHash in args:
 		ton.VoteOffer(offerHash)
-	ColorPrint("VoteOffer - {green}OK{endc}")
+	color_print("VoteOffer - {green}OK{endc}")
 #end define
 
 def OfferDiff(ton, args):
@@ -918,7 +965,7 @@ def OfferDiff(ton, args):
 		offerHash = args[0]
 		offerHash = offerHash
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} od <offer-hash>")
+		color_print("{red}Bad args. Usage:{endc} od <offer-hash>")
 		return
 	ton.GetOfferDiff(offerHash)
 #end define
@@ -928,7 +975,7 @@ def GetConfig(ton, args):
 		configId = args[0]
 		configId = int(configId)
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} gc <config-id>")
+		color_print("{red}Bad args. Usage:{endc} gc <config-id>")
 		return
 	data = ton.GetConfig(configId)
 	text = json.dumps(data, indent=2)
@@ -957,9 +1004,9 @@ def PrintComplaintsList(ton, args):
 			if "adnl" not in args:
 				adnl = Reduct(adnl)
 			if isPassed == True:
-				isPassed = bcolors.Green("true")
+				isPassed = bcolors.green_text("true")
 			if isPassed == False:
-				isPassed = bcolors.Red("false")
+				isPassed = bcolors.red_text("false")
 			table += [[electionId, adnl, Fine_text, votedValidators, approvedPercent_text, isPassed]]
 		PrintTable(table)
 #end define
@@ -969,10 +1016,10 @@ def VoteComplaint(ton, args):
 		electionId = args[0]
 		complaintHash = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vc <election-id> <complaint-hash>")
+		color_print("{red}Bad args. Usage:{endc} vc <election-id> <complaint-hash>")
 		return
 	ton.VoteComplaint(electionId, complaintHash)
-	ColorPrint("VoteComplaint - {green}OK{endc}")
+	color_print("VoteComplaint - {green}OK{endc}")
 #end define
 
 def NewDomain(ton, args):
@@ -981,14 +1028,14 @@ def NewDomain(ton, args):
 		walletName = args[1]
 		adnlAddr = args[2]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} nd <domain-name> <wallet-name> <site-adnl-addr>")
+		color_print("{red}Bad args. Usage:{endc} nd <domain-name> <wallet-name> <site-adnl-addr>")
 		return
 	domain = dict()
 	domain["name"] = domainName
 	domain["adnlAddr"] = adnlAddr
 	domain["walletName"] = walletName
 	ton.NewDomain(domain)
-	ColorPrint("NewDomain - {green}OK{endc}")
+	color_print("NewDomain - {green}OK{endc}")
 #end define
 
 def PrintDomainsList(ton, args):
@@ -1002,7 +1049,7 @@ def PrintDomainsList(ton, args):
 		domainName = item.get("name")
 		walletName = item.get("walletName")
 		endTime = item.get("endTime")
-		endTime = Timestamp2Datetime(endTime, "%d.%m.%Y")
+		endTime = timestamp2datetime(endTime, "%d.%m.%Y")
 		adnlAddr = item.get("adnlAddr")
 		table += [[domainName, walletName, endTime, adnlAddr]]
 	PrintTable(table)
@@ -1012,26 +1059,26 @@ def ViewDomainStatus(ton, args):
 	try:
 		domainName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} vds <domain-name>")
+		color_print("{red}Bad args. Usage:{endc} vds <domain-name>")
 		return
 	domain = ton.GetDomain(domainName)
 	endTime = domain.get("endTime")
-	endTime = Timestamp2Datetime(endTime, "%d.%m.%Y")
+	endTime = timestamp2datetime(endTime, "%d.%m.%Y")
 	adnlAddr = domain.get("adnlAddr")
 	table = list()
 	table += [["Domain", "Expiration date", "ADNL address"]]
 	table += [[domainName, endTime, adnlAddr]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def DeleteDomain(ton, args):
 	try:
 		domainName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} dd <domain-name>")
+		color_print("{red}Bad args. Usage:{endc} dd <domain-name>")
 		return
 	ton.DeleteDomain(domainName)
-	ColorPrint("DeleteDomain - {green}OK{endc}")
+	color_print("DeleteDomain - {green}OK{endc}")
 #end define
 
 def PrintElectionEntriesList(ton, args):
@@ -1056,12 +1103,12 @@ def PrintElectionEntriesList(ton, args):
 			if "wallet" not in args:
 				walletAddr = Reduct(walletAddr)
 			table += [[adnl, pubkey, walletAddr, stake, maxFactor]]
-		PrintTable(table)
+		print_table(table)
 #end define
 
 def VoteElectionEntry(ton, args):
 	Elections(ton.local, ton)
-	ColorPrint("VoteElectionEntry - {green}OK{endc}")
+	color_print("VoteElectionEntry - {green}OK{endc}")
 #end define
 
 def PrintValidatorList(ton, args):
@@ -1088,11 +1135,11 @@ def PrintValidatorList(ton, args):
 			if "offline" in args and online != False:
 				continue
 			if online == True:
-				online = bcolors.Green("true")
+				online = bcolors.green_text("true")
 			if online == False:
-				online = bcolors.Red("false")
+				online = bcolors.red_text("false")
 			table += [[adnl, pubkey, walletAddr, efficiency, online]]
-		PrintTable(table)
+		print_table(table)
 #end define
 
 def Reduct(item):
@@ -1109,7 +1156,7 @@ def GetSettings(ton, args):
 	try:
 		name = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} get <settings-name>")
+		color_print("{red}Bad args. Usage:{endc} get <settings-name>")
 		return
 	result = ton.GetSettings(name)
 	print(json.dumps(result, indent=2))
@@ -1120,29 +1167,29 @@ def SetSettings(ton, args):
 		name = args[0]
 		value = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} set <settings-name> <settings-value>")
+		color_print("{red}Bad args. Usage:{endc} set <settings-name> <settings-value>")
 		return
 	ton.SetSettings(name, value)
-	ColorPrint("SetSettings - {green}OK{endc}")
+	color_print("SetSettings - {green}OK{endc}")
 #end define
 
 def Xrestart(inputArgs):
 	if len(inputArgs) < 2:
-		ColorPrint("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
+		color_print("{red}Bad args. Usage:{endc} xrestart <timestamp> <args>")
 		return
 	xrestart_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/xrestart.py')
 	args = ["python3", xrestart_script_path]  # TODO: Fix path
 	args += inputArgs
-	exitCode = RunAsRoot(args)
+	exitCode = run_as_root(args)
 	if exitCode == 0:
 		text = "Xrestart - {green}OK{endc}"
 	else:
 		text = "Xrestart - {red}Error{endc}"
-	ColorPrint(text)
+	color_print(text)
 #end define
 
 def Xlist(args):
-	ColorPrint("Xlist - {green}OK{endc}")
+	color_print("Xlist - {green}OK{endc}")
 #end define
 
 def GetPubKey(ton, args):
@@ -1156,7 +1203,7 @@ def SignShardOverlayCert(ton, args):
 		adnl = args[0]
 		pubkey = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} ssoc <pubkey>")
+		color_print("{red}Bad args. Usage:{endc} ssoc <pubkey>")
 		return
 	ton.SignShardOverlayCert(adnl, pubkey)
 #end define
@@ -1172,17 +1219,17 @@ def NewNominationController(ton, args):
 		rewardShare = args[2]
 		coverAbility = args[3]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} new_controller <controller-name> <nominator-addr> <reward-share> <cover-ability>")
+		color_print("{red}Bad args. Usage:{endc} new_controller <controller-name> <nominator-addr> <reward-share> <cover-ability>")
 		return
 	ton.CreateNominationController(name, nominatorAddr, rewardShare=rewardShare, coverAbility=coverAbility)
-	ColorPrint("NewNominationController - {green}OK{endc}")
+	color_print("NewNominationController - {green}OK{endc}")
 #end define
 
 def GetNominationControllerData(ton, args):
 	try:
 		addrB64 = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} get_nomination_controller_data <controller-name | controller-addr>")
+		color_print("{red}Bad args. Usage:{endc} get_nomination_controller_data <controller-name | controller-addr>")
 		return
 	addrB64 = ton.GetDestinationAddr(addrB64)
 	controllerData = ton.GetControllerData(addrB64)
@@ -1195,11 +1242,11 @@ def DepositToNominationController(ton, args):
 		destination = args[1]
 		amount = float(args[2])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} add_to_nomination_controller <wallet-name> <controller-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} add_to_nomination_controller <wallet-name> <controller-addr> <amount>")
 		return
 	destination = ton.GetDestinationAddr(destination)
 	ton.DepositToNominationController(walletName, destination, amount)
-	ColorPrint("DepositToNominationController - {green}OK{endc}")
+	color_print("DepositToNominationController - {green}OK{endc}")
 #end define
 
 def WithdrawFromNominationController(ton, args):
@@ -1208,11 +1255,11 @@ def WithdrawFromNominationController(ton, args):
 		destination = args[1]
 		amount = float(args[2])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_nomination_controller <wallet-name> <controller-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} withdraw_from_nomination_controller <wallet-name> <controller-addr> <amount>")
 		return
 	destination = ton.GetDestinationAddr(destination)
 	ton.WithdrawFromNominationController(walletName, destination, amount)
-	ColorPrint("WithdrawFromNominationController - {green}OK{endc}")
+	color_print("WithdrawFromNominationController - {green}OK{endc}")
 #end define
 
 def SendRequestToNominationController(ton, args):
@@ -1220,11 +1267,11 @@ def SendRequestToNominationController(ton, args):
 		walletName = args[0]
 		destination = args[1]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} request_to_nomination_controller <wallet-name> <controller-addr>")
+		color_print("{red}Bad args. Usage:{endc} request_to_nomination_controller <wallet-name> <controller-addr>")
 		return
 	destination = ton.GetDestinationAddr(destination)
 	ton.SendRequestToNominationController(walletName, destination)
-	ColorPrint("SendRequestToNominationController - {green}OK{endc}")
+	color_print("SendRequestToNominationController - {green}OK{endc}")
 #end define
 
 def NewRestrictedWallet(ton, args):
@@ -1234,10 +1281,10 @@ def NewRestrictedWallet(ton, args):
 		ownerAddr = args[2]
 		#subwallet = args[3]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} new_restricted_wallet <workchain-id> <wallet-name> <owner-addr>")
+		color_print("{red}Bad args. Usage:{endc} new_restricted_wallet <workchain-id> <wallet-name> <owner-addr>")
 		return
 	ton.CreateRestrictedWallet(name, ownerAddr, workchain=workchain)
-	ColorPrint("NewRestrictedWallet - {green}OK{endc}")
+	color_print("NewRestrictedWallet - {green}OK{endc}")
 #end define
 
 def NewPool(ton, args):
@@ -1248,24 +1295,24 @@ def NewPool(ton, args):
 		minValidatorStake = int(args[3])
 		minNominatorStake = int(args[4])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share-percent> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
+		color_print("{red}Bad args. Usage:{endc} new_pool <pool-name> <validator-reward-share-percent> <max-nominators-count> <min-validator-stake> <min-nominator-stake>")
 		return
 	ton.CreatePool(poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake)
-	ColorPrint("NewPool - {green}OK{endc}")
+	color_print("NewPool - {green}OK{endc}")
 #end define
 
 def ActivatePool(local, ton, args):
 	try:
 		poolName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} activate_pool <pool-name>")
+		color_print("{red}Bad args. Usage:{endc} activate_pool <pool-name>")
 		return
 	pool = ton.GetLocalPool(poolName)
 	if not os.path.isfile(pool.bocFilePath):
-		local.AddLog(f"Pool {poolName} already activated", "warning")
+		local.add_log(f"Pool {poolName} already activated", "warning")
 		return
 	ton.ActivatePool(pool)
-	ColorPrint("ActivatePool - {green}OK{endc}")
+	color_print("ActivatePool - {green}OK{endc}")
 #end define
 
 def PrintPoolsList(ton, args):
@@ -1280,14 +1327,14 @@ def PrintPoolsList(ton, args):
 		if account.status != "active":
 			pool.addrB64 = pool.addrB64_init
 		table += [[pool.name, account.status, account.balance, pool.addrB64]]
-	PrintTable(table)
+	print_table(table)
 #end define
 
 def GetPoolData(ton, args):
 	try:
 		poolName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} get_pool_data <pool-name | pool-addr>")
+		color_print("{red}Bad args. Usage:{endc} get_pool_data <pool-name | pool-addr>")
 		return
 	if ton.IsAddr(poolName):
 		poolAddr = poolName
@@ -1304,10 +1351,10 @@ def DepositToPool(ton, args):
 		pollAddr = args[1]
 		amount = float(args[2])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} deposit_to_pool <wallet-name> <pool-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} deposit_to_pool <wallet-name> <pool-addr> <amount>")
 		return
 	ton.DepositToPool(walletName, pollAddr, amount)
-	ColorPrint("DepositToPool - {green}OK{endc}")
+	color_print("DepositToPool - {green}OK{endc}")
 #end define
 
 def WithdrawFromPool(ton, args):
@@ -1316,33 +1363,33 @@ def WithdrawFromPool(ton, args):
 		poolAddr = args[1]
 		amount = float(args[2])
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} withdraw_from_pool <wallet-name> <pool-addr> <amount>")
+		color_print("{red}Bad args. Usage:{endc} withdraw_from_pool <wallet-name> <pool-addr> <amount>")
 		return
 	poolAddr = ton.GetDestinationAddr(poolAddr)
 	ton.WithdrawFromPool(walletName, poolAddr, amount)
-	ColorPrint("WithdrawFromPool - {green}OK{endc}")
+	color_print("WithdrawFromPool - {green}OK{endc}")
 #end define
 
 def DeletePool(ton, args):
 	try:
 		poolName = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} delete_pool <pool-name>")
+		color_print("{red}Bad args. Usage:{endc} delete_pool <pool-name>")
 		return
 	pool = ton.GetLocalPool(poolName)
 	pool.Delete()
-	ColorPrint("DeletePool - {green}OK{endc}")
+	color_print("DeletePool - {green}OK{endc}")
 #end define
 
 def UpdateValidatorSet(ton, args):
 	try:
 		poolAddr = args[0]
 	except:
-		ColorPrint("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
+		color_print("{red}Bad args. Usage:{endc} update_validator_set <pool-addr>")
 		return
 	wallet = ton.GetValidatorWallet()
 	ton.PoolUpdateValidatorSet(poolAddr, wallet)
-	ColorPrint("DeletePool - {green}OK{endc}")
+	color_print("DeletePool - {green}OK{endc}")
 #end define
 
 

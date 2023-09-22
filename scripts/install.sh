@@ -85,6 +85,7 @@ git clone https://github.com/${author}/${repo}.git ${repo}  # TODO: return --rec
 cd $SOURCES_DIR/${repo}
 git checkout ${branch}
 git submodule update --init --recursive
+git config --global --add safe.directory $SOURCES_DIR/${repo}
 
 # FIXME: add __init__.py in these repos
 touch mypyconsole/__init__.py

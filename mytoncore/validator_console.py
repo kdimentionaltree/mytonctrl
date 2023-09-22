@@ -11,7 +11,8 @@ class ValidatorConsole:
 	#end define
 
 	def Run(self, cmd, **kwargs):
-		timeout = kwargs.get("timeout", 3)
+		console_timeout = self.local.db.console_timeout if self.local.db.console_timeout else 3
+		timeout = kwargs.get("timeout", console_timeout)
 		if self.appPath is None or self.privKeyPath is None or self.pubKeyPath is None:
 			raise Exception("ValidatorConsole error: Validator console is not settings")
 		args = [self.appPath, "-k", self.privKeyPath, "-p", self.pubKeyPath, "-a", self.addr, "-v", "0", "--cmd", cmd]
@@ -19,7 +20,7 @@ class ValidatorConsole:
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
-			self.local.AddLog("args: {args}".format(args=args), "error")
+			self.local.add_log("args: {args}".format(args=args), "error")
 			raise Exception("ValidatorConsole error: {err}".format(err=err))
 		return output
 	#end define

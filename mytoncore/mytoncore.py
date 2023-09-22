@@ -27,9 +27,9 @@ from mytoncore.models import (
 )
 
 from mypylib.mypylib import (
-	Pars,
-	GetTimestamp,
-	Timestamp2Datetime,
+	parse,
+	get_timestamp,
+	timestamp2datetime,
 	dec2hex,
 )
 
@@ -60,16 +60,16 @@ class MyTonCore():
 	#end define
 
 	def Refresh(self):
-		if self.dbFile:
-			self.local.dbLoad(self.dbFile)
-		else:
-			self.local.dbLoad()
+		# if self.dbFile:
+		# 	self.local.dbLoad(self.dbFile)
+		# else:
+		# 	self.local.dbLoad()
 
 		if not self.walletsDir:
-			self.walletsDir = self.local.buffer.get("myWorkDir") + "wallets/"
-		self.contractsDir = self.local.buffer.get("myWorkDir") + "contracts/"
-		self.poolsDir = self.local.buffer.get("myWorkDir") + "pools/"
-		self.tempDir = self.local.buffer.get("myTempDir")
+			self.walletsDir = self.local.buffer.my_work_dir + "wallets/"
+		self.contractsDir = self.local.buffer.my_work_dir + "contracts/"
+		self.poolsDir = self.local.buffer.my_work_dir + "pools/"
+		self.tempDir = self.local.buffer.my_work_dir
 
 		self.nodeName = self.local.db.get("nodeName")
 		if self.nodeName is None:
@@ -104,22 +104,23 @@ class MyTonCore():
 		#end if
 
 		# Check config file
-		self.CheckConfigFile(fift, liteClient)
+		# self.CheckConfigFile(fift, liteClient)
 	#end define
 
 	def CheckConfigFile(self, fift, liteClient):
-		mconfigPath = self.local.buffer.get("localdbFileName")
-		backupPath = mconfigPath + ".backup"
+		mconfig_path = self.local.buffer.db_path
+		backup_path = mconfig_path + ".backup"
 		if fift is None or liteClient is None:
-			self.local.AddLog("The config file is broken", "warning")
-			if os.path.isfile(backupPath):
-				self.local.AddLog("Restoring the configuration file", "info")
-				args = ["cp", backupPath, mconfigPath]
+			self.local.add_log("The config file is broken", "warning")
+			print(f"self.local.db: {self.local.db}")
+			if os.path.isfile(backup_path):
+				self.local.add_log("Restoring the configuration file", "info")
+				args = ["cp", backup_path, mconfig_path]
 				subprocess.run(args)
 				self.Refresh()
-		elif os.path.isfile(backupPath) == False:
-			self.local.AddLog("Create backup config file", "info")
-			args = ["cp", mconfigPath, backupPath]
+		elif os.path.isfile(backup_path) == False:
+			self.local.add_log("Create backup config file", "info")
+			args = ["cp", mconfig_path, backup_path]
 			subprocess.run(args)
 	#end define
 
@@ -155,7 +156,7 @@ class MyTonCore():
 	#end define
 
 	def GetSeqno(self, wallet):
-		self.local.AddLog("start GetSeqno function", "debug")
+		self.local.add_log("start GetSeqno function", "debug")
 		cmd = "runmethodfull {addr} seqno".format(addr=wallet.addrB64)
 		result = self.liteClient.Run(cmd)
 		if "cannot run any methods" in result:
@@ -164,13 +165,13 @@ class MyTonCore():
 			return 0
 		seqno = self.GetVarFromWorkerOutput(result, "result")
 		seqno = seqno.replace(' ', '')
-		seqno = Pars(seqno, '[', ']')
+		seqno = parse(seqno, '[', ']')
 		seqno = int(seqno)
 		return seqno
 	#end define
 
 	def GetAccount(self, inputAddr):
-		#self.local.AddLog("start GetAccount function", "debug")
+		#self.local.add_log("start GetAccount function", "debug")
 		workchain, addr = self.ParseInputAddr(inputAddr)
 		account = Account(workchain, addr)
 		cmd = "getaccount {inputAddr}".format(inputAddr=inputAddr)
@@ -193,15 +194,15 @@ class MyTonCore():
 		code = self.GetBody(code)
 		data = self.GetBody(data)
 		codeHash = self.GetCodeHash(code)
-		status = Pars(state, "account_", '\n')
+		status = parse(state, "account_", '\n')
 		account.workchain = int(workchain)
 		account.addr = xhex2hex(address)
 		account.addrB64 = self.AddrFull2AddrB64(addrFull)
 		account.addrFull = addrFull
 		account.status = status
 		account.balance = ng2g(value)
-		account.lt = Pars(result, "lt = ", ' ')
-		account.hash = Pars(result, "hash = ", '\n')
+		account.lt = parse(result, "lt = ", ' ')
+		account.hash = parse(result, "hash = ", '\n')
 		account.codeHash = codeHash
 		return account
 	#end define
@@ -215,7 +216,7 @@ class MyTonCore():
 	#end define
 
 	def GetAccountHistory(self, account, limit):
-		self.local.AddLog("start GetAccountHistory function", "debug")
+		self.local.add_log("start GetAccountHistory function", "debug")
 		addr = f"{account.workchain}:{account.addr}"
 		lt = account.lt
 		transHash = account.hash
@@ -238,7 +239,7 @@ class MyTonCore():
 		for key, item in data.items():
 			if "transaction #" not in key:
 				continue
-			block_str = Pars(key, "from block ", ' ')
+			block_str = parse(key, "from block ", ' ')
 			description = self.GetKeyFromDict(item, "description")
 			type = self.GetVar(description, "trans_")
 			time = self.GetVarFromDict(item, "time")
@@ -345,7 +346,7 @@ class MyTonCore():
 		for item in arr:
 			if "x{" not in item:
 				continue
-			buff = Pars(item, '{', '}')
+			buff = parse(item, '{', '}')
 			buff = buff.replace('_', '')
 			if len(buff)%2 == 1:
 				buff = "0" + buff
@@ -363,7 +364,7 @@ class MyTonCore():
 		for item in buff:
 			if "x{" not in item:
 				continue
-			buff = Pars(item, '{', '}')
+			buff = parse(item, '{', '}')
 			buff = buff.replace('_', '')
 			if len(buff)%2 == 1:
 				buff = "0" + buff
@@ -395,7 +396,7 @@ class MyTonCore():
 		result = self.liteClient.Run(cmd)
 		if "not found" in result:
 			raise Exception("GetDomainAddr error: domain \"{domainName}\" not found".format(domainName=domainName))
-		resolver = Pars(result, "next resolver", '\n')
+		resolver = parse(result, "next resolver", '\n')
 		buff = resolver.replace(' ', '')
 		buffList = buff.split('=')
 		fullHexAddr = buffList[0]
@@ -404,7 +405,7 @@ class MyTonCore():
 	#end define
 
 	def GetDomainEndTime(self, domainName):
-		self.local.AddLog("start GetDomainEndTime function", "debug")
+		self.local.add_log("start GetDomainEndTime function", "debug")
 		buff = domainName.split('.')
 		subdomain = buff.pop(0)
 		dnsDomain = ".".join(buff)
@@ -412,28 +413,28 @@ class MyTonCore():
 
 		cmd = "runmethodfull {addr} getexpiration \"{subdomain}\"".format(addr=dnsAddr, subdomain=subdomain)
 		result = self.liteClient.Run(cmd)
-		result = Pars(result, "result:", '\n')
-		result = Pars(result, "[", "]")
+		result = parse(result, "result:", '\n')
+		result = parse(result, "[", "]")
 		result = result.replace(' ', '')
 		result = int(result)
 		return result
 	#end define
 
 	def GetDomainAdnlAddr(self, domainName):
-		self.local.AddLog("start GetDomainAdnlAddr function", "debug")
+		self.local.add_log("start GetDomainAdnlAddr function", "debug")
 		cmd = "dnsresolve {domainName} 1".format(domainName=domainName)
 		result = self.liteClient.Run(cmd)
 		lines = result.split('\n')
 		for line in lines:
 			if "adnl address" in line:
-				adnlAddr = Pars(line, "=", "\n")
+				adnlAddr = parse(line, "=", "\n")
 				adnlAddr = adnlAddr.replace(' ', '')
 				adnlAddr = adnlAddr
 				return adnlAddr
 	#end define
 
 	def GetLocalWallet(self, walletName, version=None, subwallet=None):
-		self.local.AddLog("start GetLocalWallet function", "debug")
+		self.local.add_log("start GetLocalWallet function", "debug")
 		if walletName is None:
 			return None
 		walletPath = self.walletsDir + walletName
@@ -445,7 +446,7 @@ class MyTonCore():
 	#end define
 
 	def GetWalletFromFile(self, filePath, version):
-		self.local.AddLog("start GetWalletFromFile function", "debug")
+		self.local.add_log("start GetWalletFromFile function", "debug")
 		# Check input args
 		if (".addr" in filePath):
 			filePath = filePath.replace(".addr", '')
@@ -464,7 +465,7 @@ class MyTonCore():
 	#end define
 
 	def GetHighWalletFromFile(self, filePath, subwallet, version):
-		self.local.AddLog("start GetHighWalletFromFile function", "debug")
+		self.local.add_log("start GetHighWalletFromFile function", "debug")
 		# Check input args
 		if (".addr" in filePath):
 			filePath = filePath.replace(".addr", '')
@@ -496,7 +497,7 @@ class MyTonCore():
 	#end define
 
 	def WalletVersion2Wallet(self, wallet):
-		self.local.AddLog("start WalletVersion2Wallet function", "debug")
+		self.local.add_log("start WalletVersion2Wallet function", "debug")
 		if wallet.version is not None:
 			return
 		walletsVersionList = self.GetWalletsVersionList()
@@ -505,7 +506,7 @@ class MyTonCore():
 		if version is None:
 			version = self.GetWalletVersionFromHash(account.codeHash)
 		if version is None:
-			self.local.AddLog("Wallet version not found: " + wallet.addrB64, "warning")
+			self.local.add_log("Wallet version not found: " + wallet.addrB64, "warning")
 			return
 		#end if
 
@@ -516,11 +517,11 @@ class MyTonCore():
 	def SetWalletVersion(self, addrB64, version):
 		walletsVersionList = self.GetWalletsVersionList()
 		walletsVersionList[addrB64] = version
-		self.local.dbSave()
+		# self.local.save_db()
 	#end define
 
 	def GetWalletVersionFromHash(self, inputHash):
-		self.local.AddLog("start GetWalletVersionFromHash function", "debug")
+		self.local.add_log("start GetWalletVersionFromHash function", "debug")
 		arr = dict()
 		arr["v1r1"] = "d670136510daff4fee1889b8872c4c1e89872ffa1fe58a23a5f5d99cef8edf32"
 		arr["v1r2"] = "2705a31a7ac162295c8aed0761cc6e031ab65521dd7b4a14631099e02de99e18"
@@ -554,7 +555,7 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetFullConfigAddr function", "debug")
+		self.local.add_log("start GetFullConfigAddr function", "debug")
 		result = self.liteClient.Run("getconfig 0")
 		configAddr_hex = self.GetVarFromWorkerOutput(result, "config_addr:x")
 		fullConfigAddr = "-1:{configAddr_hex}".format(configAddr_hex=configAddr_hex)
@@ -573,7 +574,7 @@ class MyTonCore():
 		#end if
 
 		# Get data
-		self.local.AddLog("start GetFullElectorAddr function", "debug")
+		self.local.add_log("start GetFullElectorAddr function", "debug")
 		result = self.liteClient.Run("getconfig 1")
 		electorAddr_hex = self.GetVarFromWorkerOutput(result, "elector_addr:x")
 		fullElectorAddr = "-1:{electorAddr_hex}".format(electorAddr_hex=electorAddr_hex)
@@ -591,7 +592,7 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetFullMinterAddr function", "debug")
+		self.local.add_log("start GetFullMinterAddr function", "debug")
 		result = self.liteClient.Run("getconfig 2")
 		minterAddr_hex = self.GetVarFromWorkerOutput(result, "minter_addr:x")
 		fullMinterAddr = "-1:{minterAddr_hex}".format(minterAddr_hex=minterAddr_hex)
@@ -609,7 +610,7 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetFullDnsRootAddr function", "debug")
+		self.local.add_log("start GetFullDnsRootAddr function", "debug")
 		result = self.liteClient.Run("getconfig 4")
 		dnsRootAddr_hex = self.GetVarFromWorkerOutput(result, "dns_root_addr:x")
 		fullDnsRootAddr = "-1:{dnsRootAddr_hex}".format(dnsRootAddr_hex=dnsRootAddr_hex)
@@ -627,12 +628,12 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetActiveElectionId function", "debug")
+		self.local.add_log("start GetActiveElectionId function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} active_election_id".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.Run(cmd)
 		activeElectionId = self.GetVarFromWorkerOutput(result, "result")
 		activeElectionId = activeElectionId.replace(' ', '')
-		activeElectionId = Pars(activeElectionId, '[', ']')
+		activeElectionId = parse(activeElectionId, '[', ']')
 		activeElectionId = int(activeElectionId)
 		
 		# Set buffer
@@ -641,26 +642,26 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorsElectedFor(self):
-		self.local.AddLog("start GetValidatorsElectedFor function", "debug")
+		self.local.add_log("start GetValidatorsElectedFor function", "debug")
 		config15 = self.GetConfig15()
 		return config15["validatorsElectedFor"]
 	#end define
 
 	def GetMinStake(self):
-		self.local.AddLog("start GetMinStake function", "debug")
+		self.local.add_log("start GetMinStake function", "debug")
 		config17 = self.GetConfig17()
 		return config17["minStake"]
 	#end define
 
 	def GetRootWorkchainEnabledTime(self):
-		self.local.AddLog("start GetRootWorkchainEnabledTime function", "debug")
+		self.local.add_log("start GetRootWorkchainEnabledTime function", "debug")
 		config12 = self.GetConfig(12)
 		enabledTime = config12["workchains"]["root"]["node"]["value"]["enabled_since"]
 		return enabledTime
 	#end define
 
 	def GetTotalValidators(self):
-		self.local.AddLog("start GetTotalValidators function", "debug")
+		self.local.add_log("start GetTotalValidators function", "debug")
 		config34 = self.GetConfig34()
 		result = config34["totalValidators"]
 		return result
@@ -683,7 +684,7 @@ class MyTonCore():
 		#block = self.GetLastBlock()
 		#cmd = f"gethead {block}"
 		#result = self.liteClient.Run(cmd)
-		#seqno =  Pars(result, "prev_key_block_seqno=", '\n')
+		#seqno =  parse(result, "prev_key_block_seqno=", '\n')
 		statesDir = "/var/ton-work/db/archive/states"
 		os.chdir(statesDir)
 		files = filter(os.path.isfile, os.listdir(statesDir))
@@ -704,7 +705,7 @@ class MyTonCore():
 		block = self.GetLastBlock()
 		cmd = f"gethead {block}"
 		result = self.liteClient.Run(cmd)
-		seqno =  Pars(result, "prev_key_block_seqno=", '\n')
+		seqno =  parse(result, "prev_key_block_seqno=", '\n')
 		data = self.GetBlockHead(-1, 8000000000000000, seqno)
 		return data
 	#end define
@@ -722,7 +723,7 @@ class MyTonCore():
 		cmd = "byseqno {workchain}:{shardchain} {seqno}"
 		cmd = cmd.format(workchain=workchain, shardchain=shardchain, seqno=seqno)
 		result = self.liteClient.Run(cmd)
-		block_str =  Pars(result, "block header of ", ' ')
+		block_str =  parse(result, "block header of ", ' ')
 		block = Block(block_str)
 		return block
 	#end define
@@ -804,30 +805,30 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetValidatorStatus function", "debug")
+		self.local.add_log("start GetValidatorStatus function", "debug")
 		validatorStatus = dict()
 		try:
 			validatorStatus["isWorking"] = True
 			result = self.validatorConsole.Run("getstats")
-			validatorStatus["unixtime"] = int(Pars(result, "unixtime", '\n'))
-			validatorStatus["masterchainblocktime"] = int(Pars(result, "masterchainblocktime", '\n'))
-			validatorStatus["stateserializermasterchainseqno"] = int(Pars(result, "stateserializermasterchainseqno", '\n'))
-			validatorStatus["shardclientmasterchainseqno"] = int(Pars(result, "shardclientmasterchainseqno", '\n'))
-			buff = Pars(result, "masterchainblock", '\n')
+			validatorStatus["unixtime"] = int(parse(result, "unixtime", '\n'))
+			validatorStatus["masterchainblocktime"] = int(parse(result, "masterchainblocktime", '\n'))
+			validatorStatus["stateserializermasterchainseqno"] = int(parse(result, "stateserializermasterchainseqno", '\n'))
+			validatorStatus["shardclientmasterchainseqno"] = int(parse(result, "shardclientmasterchainseqno", '\n'))
+			buff = parse(result, "masterchainblock", '\n')
 			validatorStatus["masterchainblock"] = self.GVS_GetItemFromBuff(buff)
-			buff = Pars(result, "gcmasterchainblock", '\n')
+			buff = parse(result, "gcmasterchainblock", '\n')
 			validatorStatus["gcmasterchainblock"] = self.GVS_GetItemFromBuff(buff)
-			buff = Pars(result, "keymasterchainblock", '\n')
+			buff = parse(result, "keymasterchainblock", '\n')
 			validatorStatus["keymasterchainblock"] = self.GVS_GetItemFromBuff(buff)
-			buff = Pars(result, "rotatemasterchainblock", '\n')
+			buff = parse(result, "rotatemasterchainblock", '\n')
 			validatorStatus["rotatemasterchainblock"] = self.GVS_GetItemFromBuff(buff)
 			validatorStatus["transNum"] = self.local.buffer.get("transNum", -1)
 			validatorStatus["blocksNum"] = self.local.buffer.get("blocksNum", -1)
 			validatorStatus["masterBlocksNum"] = self.local.buffer.get("masterBlocksNum", -1)
 		except Exception as ex:
-			self.local.AddLog(f"GetValidatorStatus warning: {ex}", "warning")
+			self.local.add_log(f"GetValidatorStatus warning: {ex}", "warning")
 			validatorStatus["isWorking"] = False
-			validatorStatus["unixtime"] = GetTimestamp()
+			validatorStatus["unixtime"] = get_timestamp()
 			validatorStatus["masterchainblocktime"] = 0
 		validatorStatus["outOfSync"] = validatorStatus["unixtime"] - validatorStatus["masterchainblocktime"]
 
@@ -857,7 +858,7 @@ class MyTonCore():
 		#end if
 
 		text = "start GetConfig function ({})".format(configId)
-		self.local.AddLog(text, "debug")
+		self.local.add_log(text, "debug")
 		cmd = "getconfig {configId}".format(configId=configId)
 		result = self.liteClient.Run(cmd)
 		start = result.find("ConfigParam")
@@ -896,22 +897,22 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetConfig32 function", "debug")
+		self.local.add_log("start GetConfig32 function", "debug")
 		config32 = dict()
 		result = self.liteClient.Run("getconfig 32")
-		config32["totalValidators"] = int(Pars(result, "total:", ' '))
-		config32["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
-		config32["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
+		config32["totalValidators"] = int(parse(result, "total:", ' '))
+		config32["startWorkTime"] = int(parse(result, "utime_since:", ' '))
+		config32["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 		lines = result.split('\n')
 		validators = list()
 		for line in lines:
 			if "public_key:" in line:
-				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-				pubkey = Pars(line, "pubkey:x", ')')
+				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
+				pubkey = parse(line, "pubkey:x", ')')
 				if config32["totalValidators"] > 1:
-					validatorWeight = int(Pars(line, "weight:", ' '))
+					validatorWeight = int(parse(line, "weight:", ' '))
 				else:
-					validatorWeight = int(Pars(line, "weight:", ')'))
+					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
@@ -932,23 +933,23 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetConfig34 function", "debug")
+		self.local.add_log("start GetConfig34 function", "debug")
 		config34 = dict()
 		result = self.liteClient.Run("getconfig 34")
-		config34["totalValidators"] = int(Pars(result, "total:", ' '))
-		config34["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
-		config34["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
-		config34["totalWeight"] = int(Pars(result, "total_weight:", ' '))
+		config34["totalValidators"] = int(parse(result, "total:", ' '))
+		config34["startWorkTime"] = int(parse(result, "utime_since:", ' '))
+		config34["endWorkTime"] = int(parse(result, "utime_until:", ' '))
+		config34["totalWeight"] = int(parse(result, "total_weight:", ' '))
 		lines = result.split('\n')
 		validators = list()
 		for line in lines:
 			if "public_key:" in line:
-				validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-				pubkey = Pars(line, "pubkey:x", ')')
+				validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
+				pubkey = parse(line, "pubkey:x", ')')
 				if config34["totalValidators"] > 1:
-					validatorWeight = int(Pars(line, "weight:", ' '))
+					validatorWeight = int(parse(line, "weight:", ' '))
 				else:
-					validatorWeight = int(Pars(line, "weight:", ')'))
+					validatorWeight = int(parse(line, "weight:", ')'))
 				buff = dict()
 				buff["adnlAddr"] = validatorAdnlAddr
 				buff["pubkey"] = pubkey
@@ -969,20 +970,20 @@ class MyTonCore():
 			return buff
 		#end if
 
-		self.local.AddLog("start GetConfig36 function", "debug")
+		self.local.add_log("start GetConfig36 function", "debug")
 		config36 = dict()
 		try:
 			result = self.liteClient.Run("getconfig 36")
-			config36["totalValidators"] = int(Pars(result, "total:", ' '))
-			config36["startWorkTime"] = int(Pars(result, "utime_since:", ' '))
-			config36["endWorkTime"] = int(Pars(result, "utime_until:", ' '))
+			config36["totalValidators"] = int(parse(result, "total:", ' '))
+			config36["startWorkTime"] = int(parse(result, "utime_since:", ' '))
+			config36["endWorkTime"] = int(parse(result, "utime_until:", ' '))
 			lines = result.split('\n')
 			validators = list()
 			for line in lines:
 				if "public_key:" in line:
-					validatorAdnlAddr = Pars(line, "adnl_addr:x", ')')
-					pubkey = Pars(line, "pubkey:x", ')')
-					validatorWeight = Pars(line, "weight:", ' ')
+					validatorAdnlAddr = parse(line, "adnl_addr:x", ')')
+					pubkey = parse(line, "pubkey:x", ')')
+					validatorWeight = parse(line, "weight:", ' ')
 					buff = dict()
 					buff["adnlAddr"] = validatorAdnlAddr
 					buff["pubkey"] = pubkey
@@ -999,21 +1000,21 @@ class MyTonCore():
 	#end define
 
 	def CreateNewKey(self):
-		self.local.AddLog("start CreateNewKey function", "debug")
+		self.local.add_log("start CreateNewKey function", "debug")
 		result = self.validatorConsole.Run("newkey")
-		key = Pars(result, "created new key ", '\n')
+		key = parse(result, "created new key ", '\n')
 		return key
 	#end define
 
 	def GetPubKeyBase64(self, key):
-		self.local.AddLog("start GetPubKeyBase64 function", "debug")
+		self.local.add_log("start GetPubKeyBase64 function", "debug")
 		result = self.validatorConsole.Run("exportpub " + key)
-		validatorPubkey_b64 = Pars(result, "got public key: ", '\n')
+		validatorPubkey_b64 = parse(result, "got public key: ", '\n')
 		return validatorPubkey_b64
 	#end define
 
 	def GetPubKey(self, key):
-		self.local.AddLog("start GetPubKey function", "debug")
+		self.local.add_log("start GetPubKey function", "debug")
 		pubkey_b64 = self.GetPubKeyBase64(key)
 		buff = pubkey_b64.encode("utf-8")
 		buff = base64.b64decode(buff)
@@ -1024,7 +1025,7 @@ class MyTonCore():
 	#end define
 
 	def AddKeyToValidator(self, key, startWorkTime, endWorkTime):
-		self.local.AddLog("start AddKeyToValidator function", "debug")
+		self.local.add_log("start AddKeyToValidator function", "debug")
 		output = False
 		cmd = "addpermkey {key} {startWorkTime} {endWorkTime}".format(key=key, startWorkTime=startWorkTime, endWorkTime=endWorkTime)
 		result = self.validatorConsole.Run(cmd)
@@ -1034,7 +1035,7 @@ class MyTonCore():
 	#end define
 
 	def AddKeyToTemp(self, key, endWorkTime):
-		self.local.AddLog("start AddKeyToTemp function", "debug")
+		self.local.add_log("start AddKeyToTemp function", "debug")
 		output = False
 		result = self.validatorConsole.Run("addtempkey {key} {key} {endWorkTime}".format(key=key, endWorkTime=endWorkTime))
 		if ("success" in result):
@@ -1043,7 +1044,7 @@ class MyTonCore():
 	#end define
 
 	def AddAdnlAddrToValidator(self, adnlAddr):
-		self.local.AddLog("start AddAdnlAddrToValidator function", "debug")
+		self.local.add_log("start AddAdnlAddrToValidator function", "debug")
 		output = False
 		result = self.validatorConsole.Run("addadnl {adnlAddr} 0".format(adnlAddr=adnlAddr))
 		if ("success" in result):
@@ -1057,7 +1058,7 @@ class MyTonCore():
 	#end define
 
 	def AttachAdnlAddrToValidator(self, adnlAddr, key, endWorkTime):
-		self.local.AddLog("start AttachAdnlAddrToValidator function", "debug")
+		self.local.add_log("start AttachAdnlAddrToValidator function", "debug")
 		output = False
 		result = self.validatorConsole.Run("addvalidatoraddr {key} {adnlAddr} {endWorkTime}".format(adnlAddr=adnlAddr, key=key, endWorkTime=endWorkTime))
 		if ("success" in result):
@@ -1066,11 +1067,11 @@ class MyTonCore():
 	#end define
 
 	def CreateConfigProposalRequest(self, offerHash, validatorIndex):
-		self.local.AddLog("start CreateConfigProposalRequest function", "debug")
+		self.local.add_log("start CreateConfigProposalRequest function", "debug")
 		fileName = self.tempDir + self.nodeName + "proposal_validator-to-sign.req"
 		args = ["config-proposal-vote-req.fif", "-i", validatorIndex, offerHash, fileName]
 		result = self.fift.Run(args)
-		fileName = Pars(result, "Saved to file ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
 		i = 0
 		start_index = 0
@@ -1084,11 +1085,11 @@ class MyTonCore():
 	#end define
 
 	def CreateComplaintRequest(self, electionId , complaintHash, validatorIndex):
-		self.local.AddLog("start CreateComplaintRequest function", "debug")
+		self.local.add_log("start CreateComplaintRequest function", "debug")
 		fileName = self.tempDir + "complaint_validator-to-sign.req"
 		args = ["complaint-vote-req.fif", validatorIndex, electionId, complaintHash, fileName]
 		result = self.fift.Run(args)
-		fileName = Pars(result, "Saved to file ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
 		i = 0
 		start_index = 0
@@ -1102,20 +1103,20 @@ class MyTonCore():
 	#end define
 
 	def PrepareComplaint(self, electionId, inputFileName):
-		self.local.AddLog("start PrepareComplaint function", "debug")
+		self.local.add_log("start PrepareComplaint function", "debug")
 		fileName = self.tempDir + "complaint-msg-body.boc"
 		args = ["envelope-complaint.fif", electionId, inputFileName, fileName]
 		result = self.fift.Run(args)
-		fileName = Pars(result, "Saved to file ", ')')
+		fileName = parse(result, "Saved to file ", ')')
 		return fileName
 	#end define
 
 	def CreateElectionRequest(self, wallet, startWorkTime, adnlAddr, maxFactor):
-		self.local.AddLog("start CreateElectionRequest function", "debug")
+		self.local.add_log("start CreateElectionRequest function", "debug")
 		fileName = self.tempDir + self.nodeName + str(startWorkTime) + "_validator-to-sign.bin"
 		args = ["validator-elect-req.fif", wallet.addrB64, startWorkTime, maxFactor, adnlAddr, fileName]
 		result = self.fift.Run(args)
-		fileName = Pars(result, "Saved to file ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		resultList = result.split('\n')
 		i = 0
 		start_index = 0
@@ -1129,25 +1130,25 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorSignature(self, validatorKey, var1):
-		self.local.AddLog("start GetValidatorSignature function", "debug")
+		self.local.add_log("start GetValidatorSignature function", "debug")
 		cmd = "sign {validatorKey} {var1}".format(validatorKey=validatorKey, var1=var1)
 		result = self.validatorConsole.Run(cmd)
-		validatorSignature = Pars(result, "got signature ", '\n')
+		validatorSignature = parse(result, "got signature ", '\n')
 		return validatorSignature
 	#end define
 
 	def SignElectionRequestWithValidator(self, wallet, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor):
-		self.local.AddLog("start SignElectionRequestWithValidator function", "debug")
+		self.local.add_log("start SignElectionRequestWithValidator function", "debug")
 		fileName = self.tempDir + self.nodeName + str(startWorkTime) + "_validator-query.boc"
 		args = ["validator-elect-signed.fif", wallet.addrB64, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
-		pubkey = Pars(result, "validator public key ", '\n')
-		fileName = Pars(result, "Saved to file ", '\n')
+		pubkey = parse(result, "validator public key ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		return pubkey, fileName
 	#end define
 
 	def SignBocWithWallet(self, wallet, bocPath, dest, coins, **kwargs):
-		self.local.AddLog("start SignBocWithWallet function", "debug")
+		self.local.add_log("start SignBocWithWallet function", "debug")
 		flags = kwargs.get("flags", list())
 		subwalletDefault = 698983191 + wallet.workchain # 0x29A9A317 + workchain
 		subwallet = kwargs.get("subwallet", subwalletDefault)
@@ -1183,12 +1184,12 @@ class MyTonCore():
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
-		resultFilePath = Pars(result, "Saved to file ", ")")
+		resultFilePath = parse(result, "Saved to file ", ")")
 		return resultFilePath
 	#end define
 
 	def SendFile(self, filePath, wallet=None, **kwargs):
-		self.local.AddLog("start SendFile function: " + filePath, "debug")
+		self.local.add_log("start SendFile function: " + filePath, "debug")
 		timeout = kwargs.get("timeout", 30)
 		remove = kwargs.get("remove", True)
 		duplicateSendfile = self.local.db.get("duplicateSendfile", True)
@@ -1207,7 +1208,7 @@ class MyTonCore():
 	#end define
 
 	def WaitTransaction(self, wallet, timeout=30):
-		self.local.AddLog("start WaitTransaction function", "debug")
+		self.local.add_log("start WaitTransaction function", "debug")
 		timesleep = 3
 		steps = timeout // timesleep
 		for i in range(steps):
@@ -1219,23 +1220,23 @@ class MyTonCore():
 	#end define
 
 	def GetReturnedStake(self, fullElectorAddr, inputAddr):
-		self.local.AddLog("start GetReturnedStake function", "debug")
+		self.local.add_log("start GetReturnedStake function", "debug")
 		workchain, addr = self.ParseInputAddr(inputAddr)
 		cmd = f"runmethodfull {fullElectorAddr} compute_returned_stake 0x{addr}"
 		result = self.liteClient.Run(cmd)
 		returnedStake = self.GetVarFromWorkerOutput(result, "result")
 		returnedStake = returnedStake.replace(' ', '')
-		returnedStake = Pars(returnedStake, '[', ']')
+		returnedStake = parse(returnedStake, '[', ']')
 		returnedStake = ng2g(returnedStake)
 		return returnedStake
 	#end define
 
 	def ProcessRecoverStake(self):
-		self.local.AddLog("start ProcessRecoverStake function", "debug")
+		self.local.add_log("start ProcessRecoverStake function", "debug")
 		resultFilePath = self.tempDir + self.nodeName + "recover-query"
 		args = ["recover-stake.fif", resultFilePath]
 		result = self.fift.Run(args)
-		resultFilePath = Pars(result, "Saved to file ", '\n')
+		resultFilePath = parse(result, "Saved to file ", '\n')
 		return resultFilePath
 	#end define
 
@@ -1244,7 +1245,6 @@ class MyTonCore():
 		usePool = self.local.db.get("usePool")
 		stakePercent = self.local.db.get("stakePercent", 99)
 		vconfig = self.GetValidatorConfig()
-		validators = vconfig.get("validators")
 		config17 = self.GetConfig17()
 
 		# Check if optional arguments have been passed to us
@@ -1258,7 +1258,7 @@ class MyTonCore():
 				# Stake was a number
 				stake = int(desiredStake)
 			else:
-				self.local.AddLog("Specified stake must be a percentage or whole number", "error")
+				self.local.add_log("Specified stake must be a percentage or whole number", "error")
 				return
 
 			# Limit stake to maximum available amount minus 10 (for transaction fees)
@@ -1271,25 +1271,25 @@ class MyTonCore():
 		if stake is None:
 			sp = stakePercent / 100
 			if sp > 1 or sp < 0:
-				self.local.AddLog("Wrong stakePercent value. Using default stake.", "warning")
-			elif len(validators) == 0:
+				self.local.add_log("Wrong stakePercent value. Using default stake.", "warning")
+			elif len(vconfig.validators) == 0:
 				stake = int(account.balance*sp/2)
-			elif len(validators) > 0:
+			elif len(vconfig.validators) > 0:
 				stake = int(account.balance*sp)
 		#end if
 
 		# Check if we have enough coins
 		if stake > config17["maxStake"]:
 			text = "Stake is greater than the maximum value. Will be used the maximum stake."
-			self.local.AddLog(text, "warning")
+			self.local.add_log(text, "warning")
 			stake = config17["maxStake"]
 		if config17["minStake"] > stake:
 			text = "Stake less than the minimum stake. Minimum stake: {minStake}".format(minStake=config17["minStake"])
-			# self.local.AddLog(text, "error")
+			# self.local.add_log(text, "error")
 			raise Exception(text)
 		if stake > account.balance:
 			text = "Don't have enough coins. stake: {stake}, account balance: {balance}".format(stake=stake, balance=account.balance)
-			# self.local.AddLog(text, "error")
+			# self.local.add_log(text, "error")
 			raise Exception(text)
 		#end if
 
@@ -1341,7 +1341,7 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorWallet(self, mode="stake"):
-		self.local.AddLog("start GetValidatorWallet function", "debug")
+		self.local.add_log("start GetValidatorWallet function", "debug")
 		useNominationController = self.local.db.get("useNominationController")
 		if useNominationController is True:
 			wallet = self.GetNominationController(mode)
@@ -1364,12 +1364,12 @@ class MyTonCore():
 			addrB64 = pool.addrB64
 		#end if
 
-		self.local.AddLog("start ElectionEntry function", "debug")
+		self.local.add_log("start ElectionEntry function", "debug")
 		# Check if validator is not synchronized
 		validatorStatus = self.GetValidatorStatus()
 		validatorOutOfSync = validatorStatus.get("outOfSync")
 		if validatorOutOfSync > 60:
-			self.local.AddLog("Validator is not synchronized", "error")
+			self.local.add_log("Validator is not synchronized", "error")
 			return
 		#end if
 
@@ -1379,7 +1379,7 @@ class MyTonCore():
 
 		# Check if elections started
 		if (startWorkTime == 0):
-			self.local.AddLog("Elections have not yet begun", "info")
+			self.local.add_log("Elections have not yet begun", "info")
 			return
 		#end if
 
@@ -1395,7 +1395,7 @@ class MyTonCore():
 		# Check if election entry already completed
 		entries = self.GetElectionEntries()
 		if adnlAddr in entries:
-			self.local.AddLog("Elections entry already completed", "info")
+			self.local.add_log("Elections entry already completed", "info")
 			return
 		#end if
 
@@ -1439,11 +1439,11 @@ class MyTonCore():
 		# Save vars to json file
 		self.SaveElectionVarsToJsonFile(wallet=wallet, account=account, stake=stake, maxFactor=maxFactor, fullElectorAddr=fullElectorAddr, startWorkTime=startWorkTime, validatorsElectedFor=validatorsElectedFor, endWorkTime=endWorkTime, validatorKey=validatorKey, validatorPubkey_b64=validatorPubkey_b64, adnlAddr=adnlAddr, var1=var1, validatorSignature=validatorSignature, validatorPubkey=validatorPubkey)
 
-		self.local.AddLog("ElectionEntry completed. Start work time: " + str(startWorkTime))
+		self.local.add_log("ElectionEntry completed. Start work time: " + str(startWorkTime))
 	#end define
 
 	def GetValidatorKeyByTime(self, startWorkTime, endWorkTime):
-		self.local.AddLog("start GetValidatorKeyByTime function", "debug")
+		self.local.add_log("start GetValidatorKeyByTime function", "debug")
 		# Check temp key
 		vconfig = self.GetValidatorConfig()
 		validators = vconfig.get("validators")
@@ -1468,18 +1468,18 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
-		self.local.AddLog("start RecoverStake function", "debug")
+		self.local.add_log("start RecoverStake function", "debug")
 		fullElectorAddr = self.GetFullElectorAddr()
 		returnedStake = self.GetReturnedStake(fullElectorAddr, wallet.addrB64)
 		if returnedStake == 0:
-			self.local.AddLog("You have nothing on the return stake", "debug")
+			self.local.add_log("You have nothing on the return stake", "debug")
 			return
 		#end if
 
 		resultFilePath = self.ProcessRecoverStake()
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, fullElectorAddr, 1)
 		self.SendFile(resultFilePath, wallet)
-		self.local.AddLog("RecoverStake completed")
+		self.local.add_log("RecoverStake completed")
 	#end define
 
 	def PoolRecoverStake(self, poolAddr):
@@ -1488,15 +1488,15 @@ class MyTonCore():
 			raise Exception("Validator wallet not found")
 		#end if
 
-		self.local.AddLog("start PoolRecoverStake function", "debug")
+		self.local.add_log("start PoolRecoverStake function", "debug")
 		resultFilePath = self.PoolProcessRecoverStake()
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, poolAddr, 1.2)
 		self.SendFile(resultFilePath, wallet)
-		self.local.AddLog("PoolRecoverStake completed")
+		self.local.add_log("PoolRecoverStake completed")
 	#end define
 
 	def PoolsUpdateValidatorSet(self):
-		self.local.AddLog("start PoolsUpdateValidatorSet function", "debug")
+		self.local.add_log("start PoolsUpdateValidatorSet function", "debug")
 		wallet = self.GetValidatorWallet()
 		pools = self.GetPools()
 		for pool in pools:
@@ -1504,7 +1504,7 @@ class MyTonCore():
 	#end define
 
 	def PoolUpdateValidatorSet(self, pool, wallet):
-		self.local.AddLog("start PoolUpdateValidatorSet function", "debug")
+		self.local.add_log("start PoolUpdateValidatorSet function", "debug")
 		poolAddr = pool.addrB64
 		poolData = self.GetPoolData(poolAddr)
 		if poolData is None:
@@ -1535,32 +1535,32 @@ class MyTonCore():
 	#end define
 
 	def PoolProcessUpdateValidatorSet(self, poolAddr, wallet):
-		self.local.AddLog("start PoolProcessUpdateValidatorSet function", "debug")
+		self.local.add_log("start PoolProcessUpdateValidatorSet function", "debug")
 		resultFilePath = self.tempDir + "pool-update-validator-set-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/update-validator-set.fif"
 		args = [fiftScript, resultFilePath]
 		result = self.fift.Run(args)
-		resultFilePath = Pars(result, "Saved to file ", '\n')
+		resultFilePath = parse(result, "Saved to file ", '\n')
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, poolAddr, 1.1)
 		self.SendFile(resultFilePath, wallet)
-		self.local.AddLog("PoolProcessUpdateValidatorSet completed")
+		self.local.add_log("PoolProcessUpdateValidatorSet completed")
 	#end define
 
 	def PoolWithdrawRequests(self, pool, wallet):
-		self.local.AddLog("start PoolWithdrawRequests function", "debug")
+		self.local.add_log("start PoolWithdrawRequests function", "debug")
 		resultFilePath = self.PoolProcessWihtdrawRequests()
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, pool.addrB64, 10)
 		self.SendFile(resultFilePath, wallet)
-		self.local.AddLog("PoolWithdrawRequests completed")
+		self.local.add_log("PoolWithdrawRequests completed")
 	#end define
 
 	def PoolProcessWihtdrawRequests(self):
-		self.local.AddLog("start PoolProcessWihtdrawRequests function", "debug")
+		self.local.add_log("start PoolProcessWihtdrawRequests function", "debug")
 		resultFilePath = self.tempDir + "pool-withdraw-requests-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/process-withdraw-requests.fif"
 		args = [fiftScript, resultFilePath]
 		result = self.fift.Run(args)
-		resultFilePath = Pars(result, "Saved to file ", '\n')
+		resultFilePath = parse(result, "Saved to file ", '\n')
 		return resultFilePath
 	#end define
 
@@ -1576,7 +1576,7 @@ class MyTonCore():
 	#end define
 
 	def SaveElectionVarsToJsonFile(self, **kwargs):
-		self.local.AddLog("start SaveElectionVarsToJsonFile function", "debug")
+		self.local.add_log("start SaveElectionVarsToJsonFile function", "debug")
 		fileName = self.tempDir + self.nodeName + str(kwargs.get("startWorkTime")) + "_ElectionEntry.json"
 		wallet = kwargs.get("wallet")
 		account = kwargs.get("account")
@@ -1591,12 +1591,12 @@ class MyTonCore():
 	#ned define
 
 	def CreateWallet(self, name, workchain=0, version="v1", **kwargs):
-		self.local.AddLog("start CreateWallet function", "debug")
+		self.local.add_log("start CreateWallet function", "debug")
 		subwalletDefault = 698983191 + workchain # 0x29A9A317 + workchain
 		subwallet = kwargs.get("subwallet", subwalletDefault)
 		walletPath = self.walletsDir + name
 		if os.path.isfile(walletPath + ".pk") and "v3" not in version:
-			self.local.AddLog("CreateWallet error: Wallet already exists: " + name, "warning")
+			self.local.add_log("CreateWallet error: Wallet already exists: " + name, "warning")
 		else:
 			if "v1" in version:
 				fiftScript = "new-wallet.fif"
@@ -1637,12 +1637,12 @@ class MyTonCore():
 	#end define
 
 	def ActivateWallet(self, wallet):
-		self.local.AddLog("start ActivateWallet function", "debug")
+		self.local.add_log("start ActivateWallet function", "debug")
 		account = self.GetAccount(wallet.addrB64)
 		if account.status == "empty":
 			raise Exception("ActivateWallet error: account status is empty")
 		elif account.status == "active":
-			self.local.AddLog("ActivateWallet warning: account status is active", "warning")
+			self.local.add_log("ActivateWallet warning: account status is active", "warning")
 		else:
 			self.SendFile(wallet.bocFilePath, wallet, remove=False)
 	#end define
@@ -1678,7 +1678,7 @@ class MyTonCore():
 	#end define
 
 	def GetWalletsNameList(self):
-		self.local.AddLog("start GetWalletsNameList function", "debug")
+		self.local.add_log("start GetWalletsNameList function", "debug")
 		walletsNameList = list()
 		for fileName in os.listdir(self.walletsDir):
 			if fileName.endswith(".addr"):
@@ -1691,7 +1691,7 @@ class MyTonCore():
 	#end define
 
 	def GetWallets(self):
-		self.local.AddLog("start GetWallets function", "debug")
+		self.local.add_log("start GetWallets function", "debug")
 		wallets = list()
 		walletsNameList = self.GetWalletsNameList()
 		for walletName in walletsNameList:
@@ -1701,7 +1701,7 @@ class MyTonCore():
 	#end define
 
 	def GenerateWalletName(self):
-		self.local.AddLog("start GenerateWalletName function", "debug")
+		self.local.add_log("start GenerateWalletName function", "debug")
 		index = 1
 		index_str = str(index).rjust(3, '0')
 		walletPrefix = "wallet_"
@@ -1723,7 +1723,7 @@ class MyTonCore():
 	#end define
 
 	def WalletsCheck(self):
-		self.local.AddLog("start WalletsCheck function", "debug")
+		self.local.add_log("start WalletsCheck function", "debug")
 		wallets = self.GetWallets()
 		for wallet in wallets:
 			if os.path.isfile(wallet.bocFilePath):
@@ -1733,16 +1733,16 @@ class MyTonCore():
 	#end define
 
 	def GetValidatorConfig(self):
-		self.local.AddLog("start GetValidatorConfig function", "debug")
+		#self.local.add_log("start GetValidatorConfig function", "debug")
 		result = self.validatorConsole.Run("getconfig")
-		text = Pars(result, "---------", "--------")
+		text = parse(result, "---------", "--------")
 		vconfig = json.loads(text)
-		return vconfig
+		return Dict(vconfig)
 	#end define
 	
 	def GetOverlaysStats(self):
-		self.local.AddLog("start GetOverlaysStats function", "debug")
-		resultFilePath = self.local.buffer.get("myTempDir") + "getoverlaysstats.json"
+		self.local.add_log("start GetOverlaysStats function", "debug")
+		resultFilePath = self.local.buffer.my_temp_dir + "getoverlaysstats.json"
 		result = self.validatorConsole.Run(f"getoverlaysstatsjson {resultFilePath}")
 		if "wrote stats" not in result:
 			raise Exception(f"GetOverlaysStats error: {result}")
@@ -1760,13 +1760,13 @@ class MyTonCore():
 		result = self.GetVarFromWorkerOutput(result, "result")
 		if result is None or "error" in result:
 			return subwalletDefault
-		subwallet = Pars(result, '[', ']')
+		subwallet = parse(result, '[', ']')
 		subwallet = int(subwallet)
 		return subwallet
 	#end define
 
 	def MoveCoins(self, wallet, dest, coins, **kwargs):
-		self.local.AddLog("start MoveCoins function", "debug")
+		self.local.add_log("start MoveCoins function", "debug")
 		flags = kwargs.get("flags", list())
 		timeout = kwargs.get("timeout", 30)
 		subwallet = kwargs.get("subwallet")
@@ -1797,13 +1797,13 @@ class MyTonCore():
 		if bounceable == False and destAccount.status == "active":
 			flags += ["-b"]
 			text = "Find non-bounceable flag, but destination account already active. Using bounceable flag"
-			self.local.AddLog(text, "warning")
+			self.local.add_log(text, "warning")
 		elif "-n" not in flags and bounceable == True and destAccount.status != "active":
 			raise Exception("Find bounceable flag, but destination account is not active. Use non-bounceable address or flag -n")
 		#end if
 
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.buffer.get("myTempDir") + wallet.name + "_wallet-query"
+		resultFilePath = self.local.buffer.my_temp_dir + wallet.name + "_wallet-query"
 		if "v1" in wallet.version:
 			fiftScript = "wallet.fif"
 			args = [fiftScript, wallet.path, dest, seqno, coins, "-m", mode, resultFilePath]
@@ -1816,12 +1816,12 @@ class MyTonCore():
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
-		savedFilePath = Pars(result, "Saved to file ", ")")
+		savedFilePath = parse(result, "Saved to file ", ")")
 		self.SendFile(savedFilePath, wallet, timeout=timeout)
 	#end define
 
 	def MoveCoinsThroughProxy(self, wallet, dest, coins):
-		self.local.AddLog("start MoveCoinsThroughProxy function", "debug")
+		self.local.add_log("start MoveCoinsThroughProxy function", "debug")
 		wallet1 = self.CreateWallet("proxy_wallet1", 0)
 		wallet2 = self.CreateWallet("proxy_wallet2", 0)
 		self.MoveCoins(wallet, wallet1.addrB64_init, coins)
@@ -1834,16 +1834,16 @@ class MyTonCore():
 	#end define
 
 	def MoveCoinsFromHW(self, wallet, destList, **kwargs):
-		self.local.AddLog("start MoveCoinsFromHW function", "debug")
+		self.local.add_log("start MoveCoinsFromHW function", "debug")
 		flags = kwargs.get("flags")
 		timeout = kwargs.get("timeout", 30)
 
 		if len(destList) == 0:
-			self.local.AddLog("MoveCoinsFromHW warning: destList is empty, break function", "warning")
+			self.local.add_log("MoveCoinsFromHW warning: destList is empty, break function", "warning")
 			return
 		#end if
 
-		orderFilePath = self.local.buffer.get("myTempDir") + wallet.name + "_order.txt"
+		orderFilePath = self.local.buffer.my_temp_dir + wallet.name + "_order.txt"
 		lines = list()
 		for dest, coins in destList:
 			lines.append("SEND {dest} {coins}".format(dest=dest, coins=coins))
@@ -1857,23 +1857,22 @@ class MyTonCore():
 		elif "v2" in wallet.version:
 			fiftScript = "highload-wallet-v2.fif"
 		seqno = self.GetSeqno(wallet)
-		resultFilePath = self.local.buffer.get("myTempDir") + wallet.name + "_wallet-query"
+		resultFilePath = self.local.buffer.my_temp_dir + wallet.name + "_wallet-query"
 		args = [fiftScript, wallet.path, wallet.subwallet, seqno, orderFilePath, resultFilePath]
 		if flags:
 			args += flags
 		result = self.fift.Run(args)
-		savedFilePath = Pars(result, "Saved to file ", ")")
+		savedFilePath = parse(result, "Saved to file ", ")")
 		self.SendFile(savedFilePath, wallet, timeout=timeout)
 	#end define
 
 	def GetValidatorKey(self):
 		vconfig = self.GetValidatorConfig()
-		validators = vconfig["validators"]
-		for validator in validators:
+		for validator in vconfig["validators"]:
 			validatorId = validator["id"]
 			key_bytes = base64.b64decode(validatorId)
 			validatorKey = key_bytes.hex().upper()
-			timestamp = GetTimestamp()
+			timestamp = get_timestamp()
 			if timestamp > validator["election_date"]:
 				return validatorKey
 		raise Exception("GetValidatorKey error: validator key not found. Are you sure you are a validator?")
@@ -1907,7 +1906,7 @@ class MyTonCore():
 		#end if
 
 		# Get raw data
-		self.local.AddLog("start GetElectionEntries function", "debug")
+		self.local.add_log("start GetElectionEntries function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} participant_list_extended".format(fullElectorAddr=fullElectorAddr)
 		result = self.liteClient.Run(cmd)
 		rawElectionEntries = self.Result2List(result)
@@ -1948,7 +1947,7 @@ class MyTonCore():
 	#end define
 
 	def GetSaveElections(self):
-		timestamp = GetTimestamp()
+		timestamp = get_timestamp()
 		saveElections = self.local.db.get("saveElections")
 		if saveElections is None:
 			saveElections = dict()
@@ -1969,7 +1968,7 @@ class MyTonCore():
 	#end define
 
 	def GetOffers(self):
-		self.local.AddLog("start GetOffers function", "debug")
+		self.local.add_log("start GetOffers function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
 		# Get raw data
 		cmd = "runmethodfull {fullConfigAddr} list_proposals".format(fullConfigAddr=fullConfigAddr)
@@ -2021,7 +2020,7 @@ class MyTonCore():
 	#end define
 
 	def GetOfferDiff(self, offerHash):
-		self.local.AddLog("start GetOfferDiff function", "debug")
+		self.local.add_log("start GetOfferDiff function", "debug")
 		offer = self.GetOffer(offerHash)
 		configId = offer["config"]["id"]
 		configValue = offer["config"]["value"]
@@ -2118,7 +2117,7 @@ class MyTonCore():
 		#end if
 
 		# Get raw data
-		self.local.AddLog("start GetComplaints function", "debug")
+		self.local.add_log("start GetComplaints function", "debug")
 		cmd = "runmethodfull {fullElectorAddr} list_complaints {electionId}".format(fullElectorAddr=fullElectorAddr, electionId=electionId)
 		result = self.liteClient.Run(cmd)
 		rawComplaints = self.Result2List(result)
@@ -2185,7 +2184,7 @@ class MyTonCore():
 	#end define
 
 	def GetSaveComplaints(self):
-		timestamp = GetTimestamp()
+		timestamp = get_timestamp()
 		saveComplaints = self.local.db.get("saveComplaints")
 		if type(saveComplaints) is not dict:
 			saveComplaints = dict()
@@ -2209,7 +2208,7 @@ class MyTonCore():
 	#end define
 
 	def GetComplaintsNumber(self):
-		self.local.AddLog("start GetComplaintsNumber function", "debug")
+		self.local.add_log("start GetComplaintsNumber function", "debug")
 		result = dict()
 		complaints = self.GetComplaints()
 		votedComplaints = self.GetVotedComplaints()
@@ -2227,7 +2226,7 @@ class MyTonCore():
 	#end define
 
 	def GetComplaint(self, electionId, complaintHash):
-		self.local.AddLog("start GetComplaint function", "debug")
+		self.local.add_log("start GetComplaint function", "debug")
 		complaints = self.GetComplaints(electionId)
 		for key, item in complaints.items():
 			if complaintHash == item.get("hash"):
@@ -2236,25 +2235,25 @@ class MyTonCore():
 	#end define
 
 	def SignProposalVoteRequestWithValidator(self, offerHash, validatorIndex, validatorPubkey_b64, validatorSignature):
-		self.local.AddLog("start SignProposalVoteRequestWithValidator function", "debug")
+		self.local.add_log("start SignProposalVoteRequestWithValidator function", "debug")
 		fileName = self.tempDir + self.nodeName + "proposal_vote-msg-body.boc"
 		args = ["config-proposal-vote-signed.fif", "-i", validatorIndex, offerHash, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
-		fileName = Pars(result, "Saved to file ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		return fileName
 	#end define
 
 	def SignComplaintVoteRequestWithValidator(self, complaintHash, electionId, validatorIndex, validatorPubkey_b64, validatorSignature):
-		self.local.AddLog("start SignComplaintRequestWithValidator function", "debug")
+		self.local.add_log("start SignComplaintRequestWithValidator function", "debug")
 		fileName = self.tempDir + "complaint_vote-msg-body.boc"
 		args = ["complaint-vote-signed.fif", validatorIndex, electionId, complaintHash, validatorPubkey_b64, validatorSignature, fileName]
 		result = self.fift.Run(args)
-		fileName = Pars(result, "Saved to file ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		return fileName
 	#end define
 
 	def VoteOffer(self, offerHash):
-		self.local.AddLog("start VoteOffer function", "debug")
+		self.local.add_log("start VoteOffer function", "debug")
 		fullConfigAddr = self.GetFullConfigAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
 		validatorKey = self.GetValidatorKey()
@@ -2262,7 +2261,7 @@ class MyTonCore():
 		validatorIndex = self.GetValidatorIndex()
 		offer = self.GetOffer(offerHash)
 		if validatorIndex in offer.get("votedValidators"):
-			self.local.AddLog("Proposal already has been voted", "debug")
+			self.local.add_log("Proposal already has been voted", "debug")
 			return
 		var1 = self.CreateConfigProposalRequest(offerHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
@@ -2273,7 +2272,7 @@ class MyTonCore():
 	#end define
 
 	def VoteComplaint(self, electionId, complaintHash):
-		self.local.AddLog("start VoteComplaint function", "debug")
+		self.local.add_log("start VoteComplaint function", "debug")
 		complaintHash = int(complaintHash)
 		fullElectorAddr = self.GetFullElectorAddr()
 		wallet = self.GetValidatorWallet(mode="vote")
@@ -2284,7 +2283,7 @@ class MyTonCore():
 		votedValidators = complaint.get("votedValidators")
 		pubkey = complaint.get("pubkey")
 		if validatorIndex in votedValidators:
-			self.local.AddLog("Complaint already has been voted", "info")
+			self.local.add_log("Complaint already has been voted", "info")
 			return
 		var1 = self.CreateComplaintRequest(electionId, complaintHash, validatorIndex)
 		validatorSignature = self.GetValidatorSignature(validatorKey, var1)
@@ -2295,7 +2294,7 @@ class MyTonCore():
 	#end define
 
 	def SaveComplaints(self, electionId):
-		self.local.AddLog("start SaveComplaints function", "debug")
+		self.local.add_log("start SaveComplaints function", "debug")
 		filePrefix = self.tempDir + "scheck_"
 		cmd = "savecomplaints {electionId} {filePrefix}".format(electionId=electionId, filePrefix=filePrefix)
 		result = self.liteClient.Run(cmd)
@@ -2315,7 +2314,7 @@ class MyTonCore():
 	#end define
 
 	def CheckComplaint(self, filePath):
-		self.local.AddLog("start CheckComplaint function", "debug")
+		self.local.add_log("start CheckComplaint function", "debug")
 		cmd = "loadproofcheck {filePath}".format(filePath=filePath)
 		result = self.liteClient.Run(cmd, timeout=30)
 		lines = result.split('\n')
@@ -2351,7 +2350,7 @@ class MyTonCore():
 		#end if
 
 		text = "start GetValidatorsLoad function ({}, {})".format(start, end)
-		self.local.AddLog(text, "debug")
+		self.local.add_log(text, "debug")
 		if saveCompFiles is True:
 			filePrefix = self.tempDir + f"checkload_{start}_{end}"
 		else:
@@ -2433,7 +2432,7 @@ class MyTonCore():
 			return buff
 		#end if
 		
-		timestamp = GetTimestamp()
+		timestamp = get_timestamp()
 		end = timestamp - 60
 		start = end - 2000
 		config = self.GetConfig34()
@@ -2464,7 +2463,7 @@ class MyTonCore():
 	#end define
 
 	def CheckValidators(self, start, end):
-		self.local.AddLog("start CheckValidators function", "debug")
+		self.local.add_log("start CheckValidators function", "debug")
 		electionId = start
 		complaints = self.GetComplaints(electionId)
 		data = self.GetValidatorsLoad(start, end, saveCompFiles=True)
@@ -2491,11 +2490,11 @@ class MyTonCore():
 			fileName = self.PrepareComplaint(electionId, fileName)
 			fileName = self.SignBocWithWallet(wallet, fileName, fullElectorAddr, 300)
 			self.SendFile(fileName, wallet)
-			self.local.AddLog("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
+			self.local.add_log("var1: {}, var2: {}, pubkey: {}, election_id: {}".format(var1, var2, pubkey, electionId), "debug")
 	#end define
 
 	def GetOffer(self, offerHash):
-		self.local.AddLog("start GetOffer function", "debug")
+		self.local.add_log("start GetOffer function", "debug")
 		offers = self.GetOffers()
 		for offer in offers:
 			if offerHash == offer.get("hash"):
@@ -2504,7 +2503,7 @@ class MyTonCore():
 	#end define
 
 	def GetOffersNumber(self):
-		self.local.AddLog("start GetOffersNumber function", "debug")
+		self.local.add_log("start GetOffersNumber function", "debug")
 		result = dict()
 		offers = self.GetOffers()
 		saveOffers = self.GetSaveOffers()
@@ -2530,12 +2529,12 @@ class MyTonCore():
 			if adnlAddr == searchAdnlAddr:
 				return index
 			index += 1
-		self.local.AddLog("GetValidatorIndex warning: index not found.", "warning")
+		self.local.add_log("GetValidatorIndex warning: index not found.", "warning")
 		return -1
 	#end define
 
 	def GetValidatorEfficiency(self, adnlAddr=None):
-		self.local.AddLog("start GetValidatorEfficiency function", "debug")
+		self.local.add_log("start GetValidatorEfficiency function", "debug")
 		validators = self.GetValidatorsList()
 		if adnlAddr is None:
 			adnlAddr = self.GetAdnlAddr()
@@ -2544,7 +2543,7 @@ class MyTonCore():
 			if adnlAddr == searchAdnlAddr:
 				efficiency = validator.get("efficiency")
 				return efficiency
-		self.local.AddLog("GetValidatorEfficiency warning: efficiency not found.", "warning")
+		self.local.add_log("GetValidatorEfficiency warning: efficiency not found.", "warning")
 	#end define
 
 	def GetDbUsage(self):
@@ -2554,7 +2553,7 @@ class MyTonCore():
 	#end define
 
 	def GetDbSize(self, exceptions="log"):
-		self.local.AddLog("start GetDbSize function", "debug")
+		self.local.add_log("start GetDbSize function", "debug")
 		exceptions = exceptions.split()
 		totalSize = 0
 		path = "/var/ton-work/"
@@ -2571,7 +2570,7 @@ class MyTonCore():
 	#end define
 
 	def Result2List(self, text):
-		buff = Pars(text, "result:", "\n")
+		buff = parse(text, "result:", "\n")
 		if buff is None or "error" in buff:
 			return
 		buff = buff.replace(')', ']')
@@ -2706,7 +2705,7 @@ class MyTonCore():
 	#end define
 
 	def NewDomain(self, domain):
-		self.local.AddLog("start NewDomain function", "debug")
+		self.local.add_log("start NewDomain function", "debug")
 		domainName = domain["name"]
 		buff = domainName.split('.')
 		subdomain = buff.pop(0)
@@ -2725,7 +2724,7 @@ class MyTonCore():
 		fileName = self.tempDir + "dns-msg-body.boc"
 		args = ["auto-dns.fif", dnsAddr, "add", subdomain, expireInSec, "owner", wallet.addrB64, "cat", catId, "adnl", domain["adnlAddr"], "-o", fileName]
 		result = self.fift.Run(args)
-		resultFilePath = Pars(result, "Saved to file ", ')')
+		resultFilePath = parse(result, "Saved to file ", ')')
 		resultFilePath = self.SignBocWithWallet(wallet, resultFilePath, dnsAddr, 1.7)
 		self.SendFile(resultFilePath, wallet)
 		self.AddDomain(domain)
@@ -2736,7 +2735,7 @@ class MyTonCore():
 			self.local.db["domains"] = list()
 		#end if
 		self.local.db["domains"].append(domain)
-		self.local.dbSave()
+		# self.local.save_db()
 	#end define
 
 	def GetDomains(self):
@@ -2760,7 +2759,7 @@ class MyTonCore():
 		for domain in domains:
 			if (domainName == domain.get("name")):
 				domains.remove(domain)
-				self.local.dbSave()
+				# self.local.save_db()
 				return
 		raise Exception("DeleteDomain error: Domain not found")
 	#end define
@@ -2776,7 +2775,7 @@ class MyTonCore():
 	def AddAutoTransferRule(self, rule):
 		autoTransferRules = self.GetAutoTransferRules()
 		autoTransferRules.append(rule)
-		self.local.dbSave()
+		# self.local.save_db()
 	#end define
 
 	def AddBookmark(self, bookmark):
@@ -2784,7 +2783,7 @@ class MyTonCore():
 			self.local.db["bookmarks"] = list()
 		#end if
 		self.local.db["bookmarks"].append(bookmark)
-		self.local.dbSave()
+		# self.local.save_db()
 	#end define
 
 	def GetBookmarks(self):
@@ -2813,7 +2812,7 @@ class MyTonCore():
 			bookmarkName = bookmark.get("name")
 			if (type == bookmarkType and name == bookmarkName):
 				bookmarks.remove(bookmark)
-				self.local.dbSave()
+				# self.local.save_db()
 				return
 		raise Exception("DeleteBookmark error: Bookmark not found")
 	#end define
@@ -2833,7 +2832,7 @@ class MyTonCore():
 			if endTime == 0:
 				data = "free"
 			else:
-				data = Timestamp2Datetime(endTime, "%d.%m.%Y")
+				data = timestamp2datetime(endTime, "%d.%m.%Y")
 		else:
 			data = "null"
 		bookmark["data"] = data
@@ -2854,7 +2853,7 @@ class MyTonCore():
 		saveOffers = self.GetSaveOffers()
 		if offerHash not in saveOffers:
 			saveOffers.append(offerHash)
-			self.local.dbSave()
+			# self.local.save_db()
 	#end define
 
 	def GetVotedComplaints(self):
@@ -2871,7 +2870,7 @@ class MyTonCore():
 		votedComplaints = self.GetVotedComplaints()
 		if pseudohash not in votedComplaints:
 			votedComplaints[pseudohash] = complaint
-			self.local.dbSave()
+			# self.local.save_db()
 	#end define
 
 	def GetDestinationAddr(self, destination):
@@ -2937,7 +2936,7 @@ class MyTonCore():
 		networkTestnet = self.IsTestnet()
 		if testnet != networkTestnet:
 			text = f"ParseAddrB64 warning: testnet flag do not match. Addr: {testnet}, Network: {networkTestnet}"
-			self.local.AddLog(text, "warning")
+			self.local.add_log(text, "warning")
 		#end if
 
 		# get wc and addr
@@ -3021,7 +3020,7 @@ class MyTonCore():
 	#end define
 
 	def GetSettings(self, name):
-		self.local.dbLoad()
+		# self.local.load_db()
 		result = self.local.db.get(name)
 		return result
 	#end define
@@ -3031,7 +3030,7 @@ class MyTonCore():
 			data = json.loads(data)
 		except: pass
 		self.local.db[name] = data
-		self.local.dbSave()
+		# self.local.save_db()
 	#end define
 
 	def Tlb2Json(self, text):
@@ -3105,7 +3104,7 @@ class MyTonCore():
 	#end define
 
 	def SignShardOverlayCert(self, adnl, pubkey):
-		self.local.AddLog("start SignShardOverlayCert function", "debug")
+		self.local.add_log("start SignShardOverlayCert function", "debug")
 		fileName = self.tempDir + pubkey + ".cert"
 		cmd = "signshardoverlaycert {workchain} {shardprefix} {pubkey} {expireat} {maxsize} {outfile}"
 		cmd = cmd.format(workchain=-1, shardprefix=-9223372036854775808, pubkey=pubkey, expireat=172800, maxsize=8192, outfile=fileName)
@@ -3127,7 +3126,7 @@ class MyTonCore():
 	#end define
 
 	def ImportShardOverlayCert(self):
-		self.local.AddLog("start ImportShardOverlayCert function", "debug")
+		self.local.add_log("start ImportShardOverlayCert function", "debug")
 		adnlAddr = self.GetAdnlAddr()
 		pubkey = self.GetPubKey(adnlAddr)
 		adnl = pubkey # adnl = adnlAddr
@@ -3152,7 +3151,7 @@ class MyTonCore():
 
 		# Check certificate
 		if cert is None:
-			self.local.AddLog("ImportShardOverlayCert warning: certificate not found", "warning")
+			self.local.add_log("ImportShardOverlayCert warning: certificate not found", "warning")
 			return
 		#end if
 
@@ -3164,7 +3163,7 @@ class MyTonCore():
 	#end define
 
 	def ImportCertificate(self, pubkey, fileName):
-		self.local.AddLog("start ImportCertificate function", "debug")
+		self.local.add_log("start ImportCertificate function", "debug")
 		cmd = "importshardoverlaycert {workchain} {shardprefix} {pubkey} {certfile}"
 		cmd = cmd.format(workchain=-1, shardprefix=-9223372036854775808, pubkey=pubkey, certfile=fileName)
 		result = self.validatorConsole.Run(cmd)
@@ -3180,7 +3179,7 @@ class MyTonCore():
 	#end define
 
 	def DownloadContract(self, url, branch=None):
-		self.local.AddLog("start DownloadContract function", "debug")
+		self.local.add_log("start DownloadContract function", "debug")
 		buff = url.split('/')
 		gitPath = self.contractsDir + buff[-1] + '/'
 
@@ -3245,7 +3244,7 @@ class MyTonCore():
 		bocPath = self.contractsDir + "nomination-contract/scripts/withdraw-stake"
 		args = [fiftScript, amount, bocPath]
 		result = self.fift.Run(args)
-		bocPath = Pars(result, "Saved to file ", ")")
+		bocPath = parse(result, "Saved to file ", ")")
 		resultFilePath = self.SignBocWithWallet(wallet, bocPath, destAddr, 1)
 		self.SendFile(resultFilePath, wallet)
 	#end define
@@ -3277,7 +3276,7 @@ class MyTonCore():
 	#end define
 
 	def CreatePool(self, poolName, validatorRewardSharePercent, maxNominatorsCount, minValidatorStake, minNominatorStake):
-		self.local.AddLog("start CreatePool function", "debug")
+		self.local.add_log("start CreatePool function", "debug")
 		validatorRewardShare = int(validatorRewardSharePercent * 100)
 		contractPath = self.contractsDir + "nominator-pool/"
 		if not os.path.isdir(contractPath):
@@ -3286,7 +3285,7 @@ class MyTonCore():
 
 		filePath = self.poolsDir + poolName
 		if os.path.isfile(filePath + ".addr"):
-			self.local.AddLog("CreatePool warning: Pool already exists: " + filePath, "warning")
+			self.local.add_log("CreatePool warning: Pool already exists: " + filePath, "warning")
 			return
 		#end if
 
@@ -3308,7 +3307,7 @@ class MyTonCore():
 	#end define
 
 	def ActivatePool(self, pool, ex=True):
-		self.local.AddLog("start ActivatePool function", "debug")
+		self.local.add_log("start ActivatePool function", "debug")
 		for i in range(10):
 			time.sleep(3)
 			account = self.GetAccount(pool.addrB64)
@@ -3321,7 +3320,7 @@ class MyTonCore():
 
 	def DepositToPool(self, walletName, poolAddr, amount):
 		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.local.buffer.get("myTempDir") + wallet.name + "validator-deposit-query.boc"
+		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-deposit-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-deposit.fif"
 		args = [fiftScript, bocPath]
 		result = self.fift.Run(args)
@@ -3338,9 +3337,9 @@ class MyTonCore():
 	#end define
 
 	def WithdrawFromPoolProcess(self, walletName, poolAddr, amount):
-		self.local.AddLog("start WithdrawFromPoolProcess function", "debug")
+		self.local.add_log("start WithdrawFromPoolProcess function", "debug")
 		wallet = self.GetLocalWallet(walletName)
-		bocPath = self.local.buffer.get("myTempDir") + wallet.name + "validator-withdraw-query.boc"
+		bocPath = self.local.buffer.my_temp_dir + wallet.name + "validator-withdraw-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-withdraw.fif"
 		args = [fiftScript, amount, bocPath]
 		result = self.fift.Run(args)
@@ -3349,10 +3348,10 @@ class MyTonCore():
 	#end define
 	
 	def PendWithdrawFromPool(self, walletName, poolAddr, amount):
-		self.local.AddLog("start PendWithdrawFromPool function", "debug")
+		self.local.add_log("start PendWithdrawFromPool function", "debug")
 		pendingWithdraws = self.GetPendingWithdraws()
 		pendingWithdraws[poolAddr] = (walletName, amount)
-		self.local.dbSave()
+		# self.local.load_db()
 	#end define
 	
 	def HandlePendingWithdraw(self, pendingWithdraws, poolAddr):
@@ -3371,28 +3370,28 @@ class MyTonCore():
 	#end define
 
 	def SignElectionRequestWithPoolWithValidator(self, pool, startWorkTime, adnlAddr, validatorPubkey_b64, validatorSignature, maxFactor, stake):
-		self.local.AddLog("start SignElectionRequestWithPoolWithValidator function", "debug")
+		self.local.add_log("start SignElectionRequestWithPoolWithValidator function", "debug")
 		fileName = self.tempDir + str(startWorkTime) + "_validator-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/validator-elect-signed.fif"
 		args = [fiftScript, pool.addrB64, startWorkTime, maxFactor, adnlAddr, validatorPubkey_b64, validatorSignature, fileName, stake]
 		result = self.fift.Run(args)
-		pubkey = Pars(result, "validator public key ", '\n')
-		fileName = Pars(result, "Saved to file ", '\n')
+		pubkey = parse(result, "validator public key ", '\n')
+		fileName = parse(result, "Saved to file ", '\n')
 		return pubkey, fileName
 	#end define
 
 	def PoolProcessRecoverStake(self):
-		self.local.AddLog("start PoolProcessRecoverStake function", "debug")
+		self.local.add_log("start PoolProcessRecoverStake function", "debug")
 		resultFilePath = self.tempDir + "recover-query.boc"
 		fiftScript = self.contractsDir + "nominator-pool/func/recover-stake.fif"
 		args = [fiftScript, resultFilePath]
 		result = self.fift.Run(args)
-		resultFilePath = Pars(result, "Saved to file ", '\n')
+		resultFilePath = parse(result, "Saved to file ", '\n')
 		return resultFilePath
 	#end define
 
 	def GetControllerData(self, addrB64):
-		self.local.AddLog("start GetControllerData function", "debug")
+		self.local.add_log("start GetControllerData function", "debug")
 		account = self.GetAccount(addrB64)
 		if account.status != "active":
 			return
@@ -3422,7 +3421,7 @@ class MyTonCore():
 	#end define
 
 	def GetLocalPool(self, poolName):
-		self.local.AddLog("start GetLocalPool function", "debug")
+		self.local.add_log("start GetLocalPool function", "debug")
 		if poolName is None:
 			return None
 		filePath = self.poolsDir + poolName
@@ -3438,7 +3437,7 @@ class MyTonCore():
 	#end define
 
 	def GetPoolsNameList(self):
-		self.local.AddLog("start GetPoolsNameList function", "debug")
+		self.local.add_log("start GetPoolsNameList function", "debug")
 		poolsNameList = list()
 		for fileName in os.listdir(self.poolsDir):
 			if fileName.endswith(".addr"):
@@ -3449,7 +3448,7 @@ class MyTonCore():
 	#end define
 
 	def GetPools(self):
-		self.local.AddLog("start GetPools function", "debug")
+		self.local.add_log("start GetPools function", "debug")
 		pools = list()
 		poolsNameList = self.GetPoolsNameList()
 		for poolName in poolsNameList:
@@ -3474,7 +3473,7 @@ class MyTonCore():
 	#end define
 
 	def IsPoolReadyToStake(self, addrB64):
-		now = GetTimestamp()
+		now = get_timestamp()
 		config15 = self.GetConfig15()
 		lastSentStakeTime = self.GetPoolLastSentStakeTime(addrB64)
 		stakeFreezeDelay = config15["validatorsElectedFor"] + config15["stakeHeldFor"]
@@ -3490,7 +3489,7 @@ class MyTonCore():
 	#end define
 
 	def GetPoolData(self, addrB64):
-		self.local.AddLog("start GetPoolData function", "debug")
+		self.local.add_log("start GetPoolData function", "debug")
 		cmd = f"runmethodfull {addrB64} get_pool_data"
 		result = self.liteClient.Run(cmd)
 		data = self.Result2List(result)
@@ -3534,7 +3533,7 @@ class MyTonCore():
 	#end define
 	
 	def GetFunctionBuffer(self, name, timeout=10):
-		timestamp = GetTimestamp()
+		timestamp = get_timestamp()
 		buff = self.local.buffer.get(name)
 		if buff is None:
 			return
@@ -3548,7 +3547,7 @@ class MyTonCore():
 	
 	def SetFunctionBuffer(self, name, data):
 		buff = dict()
-		buff["time"] = GetTimestamp()
+		buff["time"] = get_timestamp()
 		buff["data"] = data
 		self.local.buffer[name] = buff
 	#end define

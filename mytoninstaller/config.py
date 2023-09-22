@@ -35,7 +35,7 @@ def SetConfig(**kwargs):
 
 
 def BackupVconfig(local):
-	local.AddLog("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
+	local.add_log("Backup validator config file 'config.json' to 'config.json.backup'", "debug")
 	vconfigPath = local.buffer["vconfigPath"]
 	backupPath = vconfigPath + ".backup"
 	args = ["cp", vconfigPath, backupPath]
@@ -44,7 +44,7 @@ def BackupVconfig(local):
 
 
 def BackupMconfig(local):
-	local.AddLog("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
+	local.add_log("Backup mytoncore config file 'mytoncore.db' to 'mytoncore.db.backup'", "debug")
 	mconfigPath = local.buffer["mconfigPath"]
 	backupPath = mconfigPath + ".backup"
 	args = ["cp", mconfigPath, backupPath]
@@ -56,21 +56,21 @@ def GetPortsFromVconfig(local):
 	vconfigPath = local.buffer["vconfigPath"]
 
 	# read vconfig
-	local.AddLog("read vconfig", "debug")
+	local.add_log("read vconfig", "debug")
 	vconfig = GetConfig(path=vconfigPath)
 
 	# read mconfig
-	local.AddLog("read mconfig", "debug")
+	local.add_log("read mconfig", "debug")
 	mconfigPath = local.buffer["mconfigPath"]
 	mconfig = GetConfig(path=mconfigPath)
 
 	# edit mytoncore config file
-	local.AddLog("edit mytoncore config file", "debug")
+	local.add_log("edit mytoncore config file", "debug")
 	mconfig["liteClient"]["liteServer"]["port"] = mconfig["liteservers"][0]["port"]
 	mconfig["validatorConsole"]["addr"] = "127.0.0.1:{}".format(mconfig["control"][0]["port"])
 
 	# write mconfig
-	local.AddLog("write mconfig", "debug")
+	local.add_log("write mconfig", "debug")
 	SetConfig(path=mconfigPath, data=mconfig)
 
 	# restart mytoncore

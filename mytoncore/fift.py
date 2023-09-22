@@ -10,7 +10,8 @@ class Fift:
 	#end define
 
 	def Run(self, args, **kwargs):
-		timeout = kwargs.get("timeout", 3)
+		fift_timeout = self.local.db.fift_timeout if self.local.db.fift_timeout else 3
+		timeout = kwargs.get("timeout", fift_timeout)
 		for i in range(len(args)):
 			args[i] = str(args[i])
 		includePath = self.libsPath + ':' + self.smartcontsPath
@@ -19,7 +20,7 @@ class Fift:
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 		if len(err) > 0:
-			self.local.AddLog("args: {args}".format(args=args), "error")
+			self.local.add_log("args: {args}".format(args=args), "error")
 			raise Exception("Fift error: {err}".format(err=err))
 		return output
 	#end define
