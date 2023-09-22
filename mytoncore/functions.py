@@ -88,11 +88,11 @@ def Elections(local, ton):
 # end define
 
 
-def Statistics(local, scanner):
+def Statistics(local):
     ReadNetworkData(local)
     SaveNetworkStatistics(local)
-    ReadTransData(local, scanner)
-    SaveTransStatistics(local)
+    # ReadTransData(local, scanner)
+    # SaveTransStatistics(local)
     ReadDiskData(local)
     SaveDiskStatistics(local)
 # end define
@@ -201,7 +201,6 @@ def ReadNetworkData(local):
     interfaceName = get_internet_interface_name()
     buff = psutil.net_io_counters(pernic=True)
     buff = buff[interfaceName]
-    data = dict()
     data = dict()
     data["timestamp"] = timestamp
     data["bytesRecv"] = buff.bytes_recv
@@ -444,7 +443,7 @@ def Telemetry(local, ton):
     data["stake"] = local.db.get("stake")
 
     # Get validator config
-    vconfig = self.GetValidatorConfig()
+    vconfig = ton.GetValidatorConfig()
     data["fullnode_adnl"] = vconfig.fullnode
 
     # Send data to toncenter server
@@ -562,7 +561,7 @@ def General(local):
 
     # Запустить потоки
     local.start_cycle(Elections, sec=600, args=(local, ton, ))
-    local.start_cycle(Statistics, sec=10, args=(local, scanner,))
+    local.start_cycle(Statistics, sec=10, args=(local, ))
     local.start_cycle(Offers, sec=600, args=(local, ton, ))
     local.start_cycle(Complaints, sec=600, args=(local, ton, ))
     local.start_cycle(Slashing, sec=600, args=(local, ton, ))
