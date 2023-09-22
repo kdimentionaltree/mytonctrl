@@ -16,11 +16,30 @@ author="ton-blockchain"
 repo="mytonctrl"
 branch="master"
 
+show_help_and_exit() {
+    echo 'Supported argumets:'
+    echo ' -m [lite|full]   Choose installation mode'
+    echo ' -c  PATH         Provide custom config for toninstaller.sh'
+    echo ' -t               Disable telemetry'
+    echo ' -i               Ignore minimum reqiurements'
+    echo ' -d               Use pre-packaged dump. Reduces duration of initial synchronization.'
+    echo ' -a               Set MyTonCtrl git repo author'
+	echo ' -r               Set MyTonCtrl git repo'
+	echo ' -b               Set MyTonCtrl git repo branch'
+	echo ' -h               Show this help'
+    exit
+}
+
+if [[ "${1-}" =~ ^-*h(elp)?$ ]]; then
+    show_help_and_exit
+fi
+
 # node install parameters
 config="https://ton-blockchain.github.io/global.config.json"
 telemetry=true
 ignore=false
 dump=false
+
 
 while getopts m:c:tida:r:b: flag
 do
@@ -33,8 +52,18 @@ do
 		a) author=${OPTARG};;
 		r) repo=${OPTARG};;
 		b) branch=${OPTARG};;
+		h) show_help_and_exit;;
+		*)
+            echo "Flag -${flag} is not recognized. Aborting"
+            exit 1 ;;
 	esac
 done
+
+# check installation mode
+if [ "${mode}" != "lite" ] && [ "${mode}" != "full" ]; then
+	echo "Run script with flag '-m lite' or '-m full'"
+	exit 1
+fi
 
 # check machine configuration
 echo -e "${COLOR}[1/5]${ENDC} Checking system requirements"
@@ -87,22 +116,16 @@ git checkout ${branch}
 git submodule update --init --recursive
 git config --global --add safe.directory $SOURCES_DIR/${repo}
 
-# FIXME: add __init__.py in these repos
-touch mypyconsole/__init__.py
-touch mypylib/__init__.py
-
 pip3 install -U .  # TODO: make installation from git directly
 
 echo -e "${COLOR}[3/5]${ENDC} Running myton.installer"
 # DEBUG
 
-# check installation mode
-if [ "${mode}" != "lite" ] && [ "${mode}" != "full" ]; then
-	echo "Run script with flag '-m lite' or '-m full'"
-	exit 1
+parent_name=$(ps -p $PPID -o comm=)
+user=$(whoami)
+if [ "$parent_name" = "sudo" ] || [ "$parent_name" = "su" ]; then
+    user=$(logname)
 fi
-
-user=$(ls -lh ${mydir}/${0} | cut -d ' ' -f 3)
 echo "User: $user"
 python3 -m mytoninstaller -m ${mode} -u ${user} -t ${telemetry} --dump ${dump}
 
