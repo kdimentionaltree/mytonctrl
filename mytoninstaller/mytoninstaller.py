@@ -39,7 +39,7 @@ def Init(local, console):
 	local.db["config"]["isStartOnlyOneProcess"] = False
 	local.db["config"]["logLevel"] = "debug"
 	local.db["config"]["isIgnorLogWarning"] = True # disable warning
-	local.Run()
+	local.run()
 	local.db["config"]["isIgnorLogWarning"] = False # enable warning
 
 
@@ -243,4 +243,4 @@ def mytoninstaller():
         General(local)
     else:
         console.Run()
-    local.Exit()
+    local.exit()

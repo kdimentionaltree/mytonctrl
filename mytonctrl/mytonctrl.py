@@ -282,9 +282,27 @@ def Update(local, args):
 	local.exit()
 #end define
 
-def Upgrade(args):
+def Upgrade(ton, args):
 	repo = "ton"
 	author, repo, branch = check_git(args, repo, "upgrade")
+
+	# bugfix if the files are in the wrong place
+	liteClient = ton.GetSettings("liteClient")
+	configPath = liteClient.get("configPath")
+	pubkeyPath = liteClient.get("liteServer").get("pubkeyPath")
+	if "ton-lite-client-test1" in configPath:
+		liteClient["configPath"] = configPath.replace("lite-client/ton-lite-client-test1.config.json", "global.config.json")
+	if "/usr/bin/ton" in pubkeyPath:
+		liteClient["liteServer"]["pubkeyPath"] = "/var/ton-work/keys/liteserver.pub"
+	ton.SetSettings("liteClient", liteClient)
+	validatorConsole = ton.GetSettings("validatorConsole")
+	privKeyPath = validatorConsole.get("privKeyPath")
+	pubKeyPath = validatorConsole.get("pubKeyPath")
+	if "/usr/bin/ton" in privKeyPath:
+		validatorConsole["privKeyPath"] = "/var/ton-work/keys/client"
+	if "/usr/bin/ton" in pubKeyPath:
+		validatorConsole["pubKeyPath"] = "/var/ton-work/keys/server.pub"
+	ton.SetSettings("validatorConsole", validatorConsole)
 
 	# Run script
 	upgrade_script_path = pkg_resources.resource_filename('mytonctrl', 'scripts/upgrade.sh')
