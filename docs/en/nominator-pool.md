@@ -116,3 +116,5 @@ If you're creating a pool for numerous nominators, you might use something like 
 2. Await the return of both your stakes from the elector.
 
 3. Proceed with the steps under "Running the Validator in Nominator Pool Mode" from the **4th step** onwards.
+
+3. Proceed with the steps under "Running the Validator in Nominator Pool Mode" from the **4th step** onwards.
