@@ -66,7 +66,7 @@ def EnableVcEvent(local):
     local.db["adnlAddr"] = adnlAddr
 
     # Сохранить
-    #local.save_db()
+    local.save()
 # end define
 
 
@@ -92,7 +92,7 @@ def Statistics(local):
     ReadNetworkData(local)
     SaveNetworkStatistics(local)
     # ReadTransData(local, scanner)
-    # SaveTransStatistics(local)
+    SaveTransStatistics(local)
     ReadDiskData(local)
     SaveDiskStatistics(local)
 # end define
